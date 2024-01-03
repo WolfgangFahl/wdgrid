@@ -1,0 +1,8 @@
+#!/bin/bash
+# WF 2024-02-03
+pip list | egrep "^green " 
+if [ $? -ne 0 ]
+then
+  pip install green
+fi
+green tests -s 1

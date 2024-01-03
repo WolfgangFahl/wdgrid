@@ -1,0 +1,8 @@
+#!/bin/bash
+# WF 2024-01-03
+
+# Upgrade pip
+pip install --upgrade pip
+
+# Install Python dependencies from your project
+pip install .
