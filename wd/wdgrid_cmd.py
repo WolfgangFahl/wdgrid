@@ -8,9 +8,9 @@ from wd.webserver import WdgridWebServer
 import sys
 from argparse import ArgumentParser
 
-class ScanCmd(WebserverCmd):
+class WdgridCmd(WebserverCmd):
     """
-    Command line for scan2wiki web server
+    Command line for wiki data grid web server
     """
     
     def getArgParser(self,description:str,version_msg)->ArgumentParser:
@@ -27,7 +27,7 @@ def main(argv:list=None):
     """
     main call
     """
-    cmd=ScanCmd(config=WdgridWebServer.get_config(),webserver_cls=WdgridWebServer)
+    cmd=WdgridCmd(config=WdgridWebServer.get_config(),webserver_cls=WdgridWebServer)
     exit_code=cmd.cmd_main(argv)
     return exit_code
         

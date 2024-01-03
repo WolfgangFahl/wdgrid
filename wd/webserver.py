@@ -6,6 +6,8 @@ Created on 2024-01-03
 from ngwidgets.input_webserver import InputWebserver
 from ngwidgets.webserver import WebserverConfig
 from wd.version import Version
+from wd.wditem_search import WikidataItemSearch
+from nicegui import Client
 
 class WdgridWebServer(InputWebserver):
     """
@@ -27,3 +29,12 @@ class WdgridWebServer(InputWebserver):
         """Constructs all the necessary attributes for the WebServer object."""
         InputWebserver.__init__(self, config=WdgridWebServer.get_config())
  
+        
+    async def home(self,_client:Client):
+        """
+        provide the main content page
+        """
+        def show():
+            self.wd_item_search=WikidataItemSearch(self)
+            
+        await(self.setup_content_div(show))
