@@ -19,7 +19,7 @@ class WdgridWebServer(InputWebserver):
         """
         copy_right = "(c)2022-2024 Wolfgang Fahl"
         config = WebserverConfig(
-            copy_right=copy_right, version=Version(), default_port=8334
+            copy_right=copy_right, version=Version(), default_port=9999
         )
         return config
 
