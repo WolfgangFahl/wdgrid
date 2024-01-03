@@ -61,7 +61,7 @@ class WikidataSearch(object):
             limit(int): the maximum amount of results to search for
         """
         try:
-            apiurl = f"https://www.wikidata.org/w/api.php?action=wbsearchentities&language={self.language}&format=json&limit={limit}&search="
+            apiurl = f"https://www.wikidata.org/w/api.php?action=wbsearchentities&language={self.language}&uselang={self.language}&format=json&limit={limit}&search="
             searchEncoded = urllib.parse.quote_plus(searchFor)
             apisearch = apiurl + searchEncoded
             with urllib.request.urlopen(apisearch, timeout=self.timeout) as url:

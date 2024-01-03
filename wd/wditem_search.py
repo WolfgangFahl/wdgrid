@@ -6,19 +6,25 @@ Created on 2024-01-03
 import asyncio
 from nicegui import ui
 from wd.wdsearch import WikidataSearch
+from ngwidgets.webserver import NiceGuiWebserver
 from ngwidgets.widgets import Lang,Link
+from ngwidgets.lod_grid import ListOfDictsGrid
 
 class WikidataItemSearch():
     """
     wikidata item search 
     """
     
-    def __init__(self,webserver):
+    def __init__(self,webserver:NiceGuiWebserver):
         """
-        constructor
+        Initialize the WikidataItemSearch with the given webserver.
+
+        Args:
+            webserver (NiceGuiWebserver): The webserver to attach the search UI.
         """
         self.webserver=webserver
         self.lang="en"
+        self.limit=9
         self.wd_search=WikidataSearch(self.lang)
         self.search_debounce_task = None
         self.keyStrokeTime=0.65 # minimum time in seconds to wait between keystrokes before starting searching
@@ -27,15 +33,21 @@ class WikidataItemSearch():
         self.setup()
         
     def setup(self):
+        """
+        setup the user interface
+        """
         with ui.card().style('width: 25%'):
-            with ui.row():
+            with ui.grid(rows=1,columns=4):
+                ui.label("lang:")
                 # Create a dropdown for language selection with the default language selected
                 # Bind the label text to the selection's value, so it updates automatically
                 ui.select(self.languages,with_input=True, value=self.lang).bind_value(self, 'lang')
+                ui.label("limit:")
+                self.limit_slider = ui.slider(min=2, max=50, value=self.limit).props('label-always').bind_value(self, 'limit')
             with ui.row():
-                self.search_input=ui.input(label='search',on_change=self.on_search_change)
-            with ui.row() as self.search_result_row:    
-                self.search_result=ui.html()
+                self.search_input=ui.input(label='search',on_change=self.on_search_change).props("size=80")
+        with ui.row() as self.search_result_row:         
+            self.search_result_grid=ListOfDictsGrid()
           
     async def on_search_change(self,_args):
         """
@@ -60,28 +72,37 @@ class WikidataItemSearch():
                 with self.search_result_row:
                     ui.notify(f"searching wikidata for {search_for} ({self.lang})...")
                     self.wd_search.language=self.lang
-                    wd_search_result=self.wd_search.searchOptions(search_for)
-                    html=self.get_html(wd_search_result)
-                    self.search_result.content=html
+                    wd_search_result=self.wd_search.searchOptions(search_for,limit=self.limit)
+                    view_lod=self.get_selection_view_lod(wd_search_result)
+                    self.search_result_grid.load_lod(view_lod)
+                    self.search_result_grid.set_checkbox_selection("#")
+                    self.search_result_grid.update()
         except asyncio.CancelledError:
             # The search was cancelled because of new input, so just quietly exit
             pass
         except BaseException as ex:
             self.webserver.handle_exception(ex,self.webserver)
  
-    def get_html(self,wd_search_result)->str:
+
+    def get_selection_view_lod(self,wd_search_result:list)->dict:
         """
-        get the html markup for the given search result
-        
-        
+        Convert the Wikidata search result list of dict to a selection.
+
+        Args:
+            wd_search_result (List[Dict[str, Any]]): The search results from Wikidata.
+
+        Returns:
+            List[Dict[str, Any]]: The list of dictionaries formatted for view.
         """
-        markup=""
-        delim=""
+        view_lod=[]
         for qid,itemLabel,desc in wd_search_result:
-            text=f"{itemLabel} ({qid}) {desc}"
             url=f"https://www.wikidata.org/wiki/{qid}"
-            link=Link.create(url,text)
-            markup=f"{markup}{delim}{link}"
-            delim="<br>"
-        return markup
-          
+            link=Link.create(url,qid)
+            row={
+                "#":len(view_lod)+1,
+                "qid": link,
+                "label": itemLabel,
+                "desc": desc
+            }
+            view_lod.append(row)
+        return view_lod
