@@ -14,7 +14,6 @@ class QueryDisplay():
     
     def __init__(self,webserver:NiceGuiWebserver,name:str):
         self.webserver=webserver
-        self.sparql_endpoint=webserver.sparql_endpoint
         self.name=name
         self.setup()
         self.sparql_query=""

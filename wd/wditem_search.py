@@ -29,7 +29,7 @@ class WikidataItemSearch:
         self.webserver = webserver
         self.record_filter = record_filter
         self.limit = 9
-        self.wd_search = WikidataSearch(self.webserver.lang)
+        self.wd_search = WikidataSearch(self.webserver.tt_config.lang)
         self.search_debounce_task = None
         self.keyStrokeTime = 0.65  # minimum time in seconds to wait between keystrokes before starting searching
         self.search_result_row = None
@@ -51,7 +51,7 @@ class WikidataItemSearch:
         """
         with ui.card().style("width: 25%"):
             with ui.grid(rows=1, columns=4):
-                WikidataItemSearch.setup_language_select(target=self.webserver)
+                WikidataItemSearch.setup_language_select(target=self.webserver.tt_config)
                 ui.label("limit:")
                 self.limit_slider = (
                     ui.slider(min=2, max=50, value=self.limit)
@@ -86,8 +86,9 @@ class WikidataItemSearch:
             search_for = self.search_input.value
             if self.search_result_row:
                 with self.search_result_row:
-                    ui.notify(f"searching wikidata for {search_for} ({self.lang})...")
-                    self.wd_search.language = self.webserver.lang
+                    lang=self.webserver.tt_config.lang
+                    ui.notify(f"searching wikidata for {search_for} ({lang})...")
+                    self.wd_search.language = lang
                     wd_search_result = self.wd_search.searchOptions(
                         search_for, limit=self.limit
                     )

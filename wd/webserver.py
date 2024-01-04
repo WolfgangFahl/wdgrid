@@ -10,9 +10,8 @@ from nicegui import Client, ui
 
 from wd.version import Version
 from wd.wditem_search import WikidataItemSearch
-from wd.truly_tabular_display import TrulyTabularDisplay
+from wd.truly_tabular_display import TrulyTabularDisplay,TrulyTabularConfig
 from lodstorage.query import EndpointManager
-
 
 class WdgridWebServer(InputWebserver):
     """
@@ -34,7 +33,7 @@ class WdgridWebServer(InputWebserver):
         """Constructs all the necessary attributes for the WebServer object."""
         InputWebserver.__init__(self, config=WdgridWebServer.get_config())
         self.endpoints = EndpointManager.getEndpoints(lang="sparql")
-        self.lang="en"
+        self.tt_config=TrulyTabularConfig()
         
         @ui.page("/tt/{qid}")
         async def truly_tabular(client: Client, qid: str):
@@ -50,7 +49,6 @@ class WdgridWebServer(InputWebserver):
         Args:
             qid(str): the Wikidata id of the item to analyze
         """
-
         def show():
             self.ttd = TrulyTabularDisplay(self, qid)
 
@@ -60,8 +58,10 @@ class WdgridWebServer(InputWebserver):
         """
         extra settings
         """
-        WikidataItemSearch.setup_language_select(target=self)
- 
+        with ui.row():
+            self.tt_config.setup_ui(self)
+            self.add_select("Endpoint",list(self.endpoints.keys())).bind_value(self,"endpoint_name")
+                
     async def home(self, _client: Client):
         """
         provide the main content page
