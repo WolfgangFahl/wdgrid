@@ -7,11 +7,11 @@ import json
 import os
 import urllib.request
 import urllib.parse
-
+from typing import List, Tuple
 
 class WikidataSearch(object):
     """
-    Wikidata Search
+    Wikidata Search API wrapper
     """
 
     def __init__(self, language="en", timeout=2.0):
@@ -25,13 +25,16 @@ class WikidataSearch(object):
         self.language = language
         self.timeout = timeout
 
-    def searchOptions(self, searchFor: str, limit: int = 9) -> list:
+    def searchOptions(self, searchFor: str, limit: int = 9) -> List[Tuple[str, str, str]]:
         """
-        search and return a list of qid,itemLabel description tuples
+        Search and return a list of qid, itemLabel, description tuples.
 
         Args:
-            searchFor(str): the string to search for
-            limit(int): the maximum amount of results to search for
+            searchFor (str): the string to search for.
+            limit (int): the maximum amount of results to return.
+
+        Returns:
+            List[Tuple[str, str, str]]: A list of tuples containing qid, itemLabel, and description.
         """
         options = []
         srlist = self.search(searchFor, limit)

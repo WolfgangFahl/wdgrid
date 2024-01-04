@@ -5,7 +5,7 @@ Created on 24.07.2022
 """
 from wd.wdsearch import WikidataSearch
 from ngwidgets.basetest import Basetest
-
+import json
 
 class TestWikidataSearch(Basetest):
     """
@@ -42,6 +42,7 @@ class TestWikidataSearch(Basetest):
                 self.assertTrue(sr is not None)
                 if debug:
                     print(f"{i:2}:{search_for}({lang}):{len(sr)}")
+                    print(json.dumps(sr,indent=2))
                     for j, record in enumerate(sr):
                         qid, qlabel, desc = record
                         if j < limit and debug:

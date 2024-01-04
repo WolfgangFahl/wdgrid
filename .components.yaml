@@ -1,0 +1,22 @@
+# Components of https://github.com/WolfgangFahl/wdgrid
+# to be shown in nicegui solution bazaar as per
+# https://github.com/WolfgangFahl/nicegui_widgets/issues/52
+# see http://ngdemo.bitplan.com/solutions
+# WF 2024-01-04
+components:
+- name: WikidataItemSearch
+  source: /wd/wditem_search.py
+  issue: 3
+  demo_url: http://wdgrid.bitplan.com
+  demo_image_url: https://github.com/WolfgangFahl/wdgrid/assets/1336221/1498a691-9253-44e3-ae24-b6c00006b881
+  description: >
+    interactive Wikidata item search with language and limit control displaying result as grid
+    of qid, itemlabel and description results which are selectable
+- name: WikidataSearch
+  source: /wd/wdsearch.py
+  issue: 2
+  demo_url: http://wdgrid.bitplan.com
+  demo_image_url: https://github.com/WolfgangFahl/wdgrid/assets/1336221/a466be31-d94f-4a3b-bdca-7fd5df0c4496
+  description: >
+    Wikidata Search API wrapper allowing to set language, uselang, limit and search item - returning
+    a list of qid, item label and description tuples
