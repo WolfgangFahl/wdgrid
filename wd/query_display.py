@@ -4,7 +4,9 @@ Created on 2024-01-04
 @author: wf
 """
 from ngwidgets.webserver import NiceGuiWebserver
+from lodstorage.query import Query
 from nicegui import ui
+
 class QueryDisplay():
     """
     display queries
@@ -12,6 +14,7 @@ class QueryDisplay():
     
     def __init__(self,webserver:NiceGuiWebserver,name:str):
         self.webserver=webserver
+        self.sparql_endpoint=webserver.sparql_endpoint
         self.name=name
         self.setup()
         self.sparql_query=""
@@ -20,10 +23,14 @@ class QueryDisplay():
     def setup(self):
         with ui.expansion(self.name) as self.expansion:
             self.code_view=ui.code("",language='sparql')
+            self.download_link_view=ui.html()
             pass
         
     def show_query(self,sparql_query:str):
         self.sparql_query=sparql_query
+        # we might need to change the endpoint
+        self.query=Query(name=self.name,query=sparql_query)
+    
         self.code_view.markdown.content=f"""```sparql
 {sparql_query}
 ```"""

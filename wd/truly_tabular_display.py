@@ -10,7 +10,6 @@ from nicegui import ui, run
 from wd.pareto import Pareto
 from wd.query_display import QueryDisplay
 
-
 class TrulyTabularDisplay:
     """
     Displays a truly tabular analysis for a given Wikidata
@@ -83,7 +82,10 @@ class TrulyTabularDisplay:
 
     def update_item_link_view(self):
         with self.item_row:
-            self.item_link_view.content = self.tt.item.asText(long=True)
+            item_text=self.tt.item.asText(long=True)
+            item_url=self.tt.item.url
+            item_link=Link.create(item_url,item_text)
+            self.item_link_view.content = item_link
 
     async def update_view(self):
         # todo add details such as endpointConf

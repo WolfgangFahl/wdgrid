@@ -28,14 +28,22 @@ class WikidataItemSearch:
         """
         self.webserver = webserver
         self.record_filter = record_filter
-        self.lang = "en"
         self.limit = 9
-        self.wd_search = WikidataSearch(self.lang)
+        self.wd_search = WikidataSearch(self.webserver.lang)
         self.search_debounce_task = None
         self.keyStrokeTime = 0.65  # minimum time in seconds to wait between keystrokes before starting searching
-        self.languages = Lang.get_language_dict()
         self.search_result_row = None
         self.setup()
+        
+    @staticmethod
+    def setup_language_select(target):
+        languages = Lang.get_language_dict()
+        ui.label("lang:")
+        # Create a dropdown for language selection with the default language selected
+        # Bind the label text to the selection's value, so it updates automatically
+        ui.select(languages, with_input=True, value=target.lang).bind_value(
+            target, "lang"
+        )
 
     def setup(self):
         """
@@ -43,12 +51,7 @@ class WikidataItemSearch:
         """
         with ui.card().style("width: 25%"):
             with ui.grid(rows=1, columns=4):
-                ui.label("lang:")
-                # Create a dropdown for language selection with the default language selected
-                # Bind the label text to the selection's value, so it updates automatically
-                ui.select(self.languages, with_input=True, value=self.lang).bind_value(
-                    self, "lang"
-                )
+                WikidataItemSearch.setup_language_select(target=self.webserver)
                 ui.label("limit:")
                 self.limit_slider = (
                     ui.slider(min=2, max=50, value=self.limit)
@@ -84,7 +87,7 @@ class WikidataItemSearch:
             if self.search_result_row:
                 with self.search_result_row:
                     ui.notify(f"searching wikidata for {search_for} ({self.lang})...")
-                    self.wd_search.language = self.lang
+                    self.wd_search.language = self.webserver.lang
                     wd_search_result = self.wd_search.searchOptions(
                         search_for, limit=self.limit
                     )

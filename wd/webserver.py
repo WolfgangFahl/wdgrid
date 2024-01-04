@@ -34,7 +34,8 @@ class WdgridWebServer(InputWebserver):
         """Constructs all the necessary attributes for the WebServer object."""
         InputWebserver.__init__(self, config=WdgridWebServer.get_config())
         self.endpoints = EndpointManager.getEndpoints(lang="sparql")
-
+        self.lang="en"
+        
         @ui.page("/tt/{qid}")
         async def truly_tabular(client: Client, qid: str):
             """
@@ -55,6 +56,12 @@ class WdgridWebServer(InputWebserver):
 
         await (self.setup_content_div(show))
 
+    def configure_settings(self):
+        """
+        extra settings
+        """
+        WikidataItemSearch.setup_language_select(target=self)
+ 
     async def home(self, _client: Client):
         """
         provide the main content page
