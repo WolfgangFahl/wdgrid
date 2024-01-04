@@ -10,7 +10,7 @@ from nicegui import Client, ui
 
 from wd.version import Version
 from wd.wditem_search import WikidataItemSearch
-from wd.truly_tabular_view import TrulyTabularView
+from wd.truly_tabular_display import TrulyTabularDisplay
 from lodstorage.query import EndpointManager
 
 
@@ -51,7 +51,7 @@ class WdgridWebServer(InputWebserver):
         """
 
         def show():
-            self.ttv = TrulyTabularView(self, qid)
+            self.ttd = TrulyTabularDisplay(self, qid)
 
         await (self.setup_content_div(show))
 
