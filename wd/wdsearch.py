@@ -5,16 +5,17 @@ Created on 2022-07-24
 """
 import json
 import os
-import urllib.request
 import urllib.parse
+import urllib.request
 from typing import List, Tuple
+
 
 class WikidataSearch(object):
     """
     Wikidata Search API wrapper
     """
 
-    def __init__(self, language="en", timeout=2.0):
+    def __init__(self, language: str = "en", timeout: float = 2.0):
         """
         Constructor
 
@@ -25,7 +26,9 @@ class WikidataSearch(object):
         self.language = language
         self.timeout = timeout
 
-    def searchOptions(self, searchFor: str, limit: int = 9) -> List[Tuple[str, str, str]]:
+    def searchOptions(
+        self, searchFor: str, limit: int = 9
+    ) -> List[Tuple[str, str, str]]:
         """
         Search and return a list of qid, itemLabel, description tuples.
 
@@ -34,7 +37,9 @@ class WikidataSearch(object):
             limit (int): the maximum amount of results to return.
 
         Returns:
-            List[Tuple[str, str, str]]: A list of tuples containing qid, itemLabel, and description.
+            List[Tuple[str, str, str]]:
+            A list of tuples containing
+            qid, itemLabel, and description.
         """
         options = []
         srlist = self.search(searchFor, limit)
