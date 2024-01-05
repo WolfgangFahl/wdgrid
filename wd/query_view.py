@@ -9,14 +9,14 @@ from lodstorage.query import Query, Endpoint
 from nicegui import ui
 
 
-class QueryDisplay():
+class QueryView():
     """
-    display queries
+    widget to display queries
     """
     
     def __init__(self,webserver:NiceGuiWebserver,name:str,sparql_endpoint:Endpoint):
         """
-        Initialize the QueryDisplay object with a given webserver and name.
+        Initialize the QueryView object with a given webserver and name.
 
         Args:
             webserver (NiceGuiWebserver): The web server instance to be used.

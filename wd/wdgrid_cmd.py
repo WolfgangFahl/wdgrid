@@ -5,7 +5,7 @@ Created on 2024-01-03
 """
 import sys
 from argparse import ArgumentParser
-
+from lodstorage.query import EndpointManager
 from ngwidgets.cmd import WebserverCmd
 
 from wd.webserver import WdgridWebServer
@@ -21,9 +21,7 @@ class WdgridCmd(WebserverCmd):
         override the default argparser call
         """
         parser = super().getArgParser(description, version_msg)
-        # parser.add_argument("-v", "--verbose", action="store_true", help="show verbose output [default: %(default)s]")
-        # parser.add_argument("-rp", "--root_path",default=ScanWebServer.examples_path(),help="path to example pdf files [default: %(default)s]")
-        # parser.add_argument("-wc", "--webcam",help="url of webcam for scans [default: %(default)s]")
+        parser.add_argument('-en', '--endpointName', default="wikidata", help=f"Name of the endpoint to use for queries. Available by default: {EndpointManager.getEndpointNames(lang='sparql')}")
         return parser
 
 

@@ -8,10 +8,12 @@ from ngwidgets.webserver import NiceGuiWebserver
 from ngwidgets.widgets import Lang,Link
 from nicegui import ui, run
 from wd.pareto import Pareto
-from wd.query_display import QueryDisplay
+from wd.query_view import QueryView
 from wd.wditem_search import WikidataItemSearch
 from dataclasses import dataclass
 from lodstorage.query import Endpoint,EndpointManager
+from numpy.random.mtrand import pareto
+from ngwidgets.lod_grid import ListOfDictsGrid
 
 @dataclass
 class TrulyTabularConfig:
@@ -28,6 +30,7 @@ class TrulyTabularConfig:
     list_separator: str = "|"
     endpoint_name: str = "wikidata"
     with_subclasses: bool = False
+    pareto_level=1
 
     def __post_init__(self):
         """
@@ -35,13 +38,24 @@ class TrulyTabularConfig:
         """
         self.endpoints = EndpointManager.getEndpoints(lang="sparql")
         self.languages = Lang.get_language_dict()
+        self.pareto_levels = {}
+        self.pareto_select = {}
+        for level in range(1, 10):
+            pareto = Pareto(level)
+            self.pareto_levels[level] = pareto
+            self.pareto_select[level] = pareto.asText(long=True)
         pass
     
     @property
     def sparql_endpoint(self)->Endpoint:
         endpoint=self.endpoints.get(self.endpoint_name,None)
         return endpoint
-        
+    
+    @property
+    def pareto(self)->Pareto:
+        pareto=self.pareto_levels[self.pareto_level]
+        return pareto
+    
     @property
     def subclass_predicate(self) -> str:
         """
@@ -56,26 +70,28 @@ class TrulyTabularConfig:
         """
         setup the user interface
         """
-        webserver.add_select("lang",
-            self.languages,with_input=True).bind_value(
-            self, "lang"
-        )
-        ui.checkbox("subclasses", value=self.with_subclasses).bind_value(
-            self, "with_subclasses"
-        )
-        list_separators = {
-            "|": "|",
-            ",": ",",
-            ";": ";",
-            ":": ":",
-            "\x1c": "FS - ASCII(28)",
-            "\x1d": "GS - ASCII(29)",
-            "\x1e": "RS - ASCII(30)",
-            "\x1f": "US - ASCII(31)",
-        }
-        webserver.add_select("List separator",list_separators).bind_value(self,"list_separator")
-        webserver.add_select("Endpoint",list(self.endpoints.keys())).bind_value(self,"endpoint_name")
-  
+        with ui.grid(columns=2):
+            webserver.add_select("lang",
+                self.languages,with_input=True).bind_value(
+                self, "lang"
+            )
+            ui.checkbox("subclasses", value=self.with_subclasses).bind_value(
+                self, "with_subclasses"
+            )
+            list_separators = {
+                "|": "|",
+                ",": ",",
+                ";": ";",
+                ":": ":",
+                "\x1c": "FS - ASCII(28)",
+                "\x1d": "GS - ASCII(29)",
+                "\x1e": "RS - ASCII(30)",
+                "\x1f": "US - ASCII(31)",
+            }
+            webserver.add_select("List separator",list_separators).bind_value(self,"list_separator")
+            webserver.add_select("Endpoint",list(self.endpoints.keys())).bind_value(self,"endpoint_name")
+            webserver.add_select("Pareto level",self.pareto_select).bind_value(self,"pareto_level")
+
 class TrulyTabularDisplay:
     """
     Displays a truly tabular analysis for a given Wikidata
@@ -86,11 +102,7 @@ class TrulyTabularDisplay:
         self.webserver = webserver
         self.config = webserver.tt_config
         self.qid = qid
-        self.pareto_levels = {}
-        self.tt = None
-        for level in range(1, 10):
-            pareto = Pareto(level)
-            self.pareto_levels[level] = pareto
+        self.tt = None  
         self.setup()
 
     def handle_exception(self, ex):
@@ -113,11 +125,17 @@ class TrulyTabularDisplay:
                         self.item_link_view = ui.html()
                         self.item_count_view = ui.html()
                 with splitter.after as self.query_display_container:
-                    self.count_query_display = QueryDisplay(
+                    self.count_query_view = QueryView(
                         self.webserver, 
-                        name="count query",
+                        name="count Query",
                         sparql_endpoint=self.config.sparql_endpoint
                     )
+                    self.property_query_view=QueryView(
+                        self.webserver,
+                        name="property Query",
+                        sparql_endpoint=self.config.sparql_endpoint)
+            with ui.row() as self.property_grid_row:
+                self.property_grid=ListOfDictsGrid()        
         # immediately do an async call of update view
         ui.timer(0, self.update_view, once=True)
 
@@ -127,16 +145,48 @@ class TrulyTabularDisplay:
         """
         try:
             self.ttcount, countQuery = self.tt.count()
+            with self.query_display_container:
+                self.count_query_view.show_query(countQuery)
             with self.item_row:
                 if self.tt.error:
                     self.item_count_view.content = "❓"
                 else:
                     self.item_count_view.content = f"{self.ttcount} instances found"
-            with self.query_display_container:
-                self.count_query_display.show_query(countQuery)
+                    self.update_property_query_view(total=self.ttcount)
         except Exception as ex:
             self.handle_exception(ex)
-
+            
+    def update_property_query_view(self,total:int):
+        """
+        update the property query view
+        """
+        pareto=self.config.pareto
+        if total is not None:
+            min_count = round(total/pareto.oneOutOf)
+        else:
+            min_count = 0
+        with self.query_display_container:
+            msg=f"searching properties with at least {min_count} usages"
+            ui.notify(msg)
+            mfp_query=self.tt.mostFrequentPropertiesQuery(minCount=min_count)
+            self.property_query_view.show_query(mfp_query.query)
+            self.update_properties_table(mfp_query)
+            
+    def update_properties_table(self,mfp_query):
+        """
+        update my properties table
+        
+        Args:
+            mfp_query(Query): the query for the most frequently used properties
+        """
+        with self.query_display_container:
+            msg=f"running query for most frequently used properties of {str(self.tt)} ..."
+            ui.notify(msg)
+            property_lod=self.tt.sparql.queryAsListOfDicts(mfp_query.query)
+            with self.property_grid_row:
+                self.property_grid.load_lod(property_lod)
+                self.property_grid.update()
+                
     def update_item_link_view(self):
         with self.item_row:
             item_text = self.tt.item.asText(long=True)
@@ -151,7 +201,8 @@ class TrulyTabularDisplay:
             subclassPredicate=self.config.subclass_predicate,
             debug=self.webserver.debug,
         )
-        self.count_query_display.sparql_endpoint=self.config.sparql_endpoint  
+        for query_view in self.count_query_view, self.property_query_view:
+            query_view.sparql_endpoint=self.config.sparql_endpoint  
         # Initialize TrulyTabular with the qid
         self.update_item_link_view()
-        await run.io_bound(self.update_item_count_view)
+        await run.io_bound(self.update_item_count_view)  

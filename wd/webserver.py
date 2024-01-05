@@ -56,8 +56,13 @@ class WdgridWebServer(InputWebserver):
         """
         extra settings
         """
-        with ui.row():
-            self.tt_config.setup_ui(self)
+        self.tt_config.setup_ui(self)
+        
+    def configure_run(self):
+        """
+        overrideable configuration
+        """
+        self.tt_config.endpoint_name=self.args.endpointName
                 
     async def home(self, _client: Client):
         """

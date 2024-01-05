@@ -82,7 +82,7 @@ class WikidataItemSearch:
                     )
                     view_lod = self.get_selection_view_lod(wd_search_result)
                     self.search_result_grid.load_lod(view_lod)
-                    self.search_result_grid.set_checkbox_selection("#")
+                    #self.search_result_grid.set_checkbox_selection("#")
                     self.search_result_grid.update()
         except asyncio.CancelledError:
             # The search was cancelled because of new input, so just quietly exit
