@@ -7,11 +7,10 @@ import asyncio
 
 from ngwidgets.lod_grid import ListOfDictsGrid
 from ngwidgets.webserver import NiceGuiWebserver
-from ngwidgets.widgets import Lang, Link
+from ngwidgets.widgets import Lang,Link
 from nicegui import ui
 from typing import Callable
 from wd.wdsearch import WikidataSearch
-
 
 class WikidataItemSearch:
     """
@@ -33,17 +32,7 @@ class WikidataItemSearch:
         self.search_debounce_task = None
         self.keyStrokeTime = 0.65  # minimum time in seconds to wait between keystrokes before starting searching
         self.search_result_row = None
-        self.setup()
-        
-    @staticmethod
-    def setup_language_select(target):
-        languages = Lang.get_language_dict()
-        ui.label("lang:")
-        # Create a dropdown for language selection with the default language selected
-        # Bind the label text to the selection's value, so it updates automatically
-        ui.select(languages, with_input=True, value=target.lang).bind_value(
-            target, "lang"
-        )
+        self.setup()      
 
     def setup(self):
         """
@@ -51,7 +40,6 @@ class WikidataItemSearch:
         """
         with ui.card().style("width: 25%"):
             with ui.grid(rows=1, columns=4):
-                WikidataItemSearch.setup_language_select(target=self.webserver.tt_config)
                 ui.label("limit:")
                 self.limit_slider = (
                     ui.slider(min=2, max=50, value=self.limit)

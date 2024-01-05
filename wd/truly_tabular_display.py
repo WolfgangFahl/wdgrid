@@ -5,21 +5,43 @@ Created on 2024-01-04
 """
 from lodstorage.trulytabular import TrulyTabular, WikidataProperty
 from ngwidgets.webserver import NiceGuiWebserver
-from ngwidgets.widgets import Link
+from ngwidgets.widgets import Lang,Link
 from nicegui import ui, run
 from wd.pareto import Pareto
 from wd.query_display import QueryDisplay
 from wd.wditem_search import WikidataItemSearch
 from dataclasses import dataclass
-
+from lodstorage.query import Endpoint,EndpointManager
 
 @dataclass
 class TrulyTabularConfig:
+    """
+    Configuration class for Truly Tabular operations.
+
+    Attributes:
+        lang (str): Language code (default is "en").
+        list_separator (str): Character used to separate items in lists (default is "|").
+        endpoint_name (str): Name of the endpoint to use (default is "wikidata").
+        with_subclasses (bool): Flag indicating whether to include subclasses in the queries (default is False).
+    """
     lang: str = "en"
     list_separator: str = "|"
     endpoint_name: str = "wikidata"
     with_subclasses: bool = False
 
+    def __post_init__(self):
+        """
+        Post-initialization to setup additional attributes.
+        """
+        self.endpoints = EndpointManager.getEndpoints(lang="sparql")
+        self.languages = Lang.get_language_dict()
+        pass
+    
+    @property
+    def sparql_endpoint(self)->Endpoint:
+        endpoint=self.endpoints.get(self.endpoint_name,None)
+        return endpoint
+        
     @property
     def subclass_predicate(self) -> str:
         """
@@ -31,7 +53,13 @@ class TrulyTabularConfig:
         return "wdt:P31/wdt:P279*" if self.with_subclasses else "wdt:P31"
 
     def setup_ui(self,webserver):
-        WikidataItemSearch.setup_language_select(target=self)
+        """
+        setup the user interface
+        """
+        webserver.add_select("lang",
+            self.languages,with_input=True).bind_value(
+            self, "lang"
+        )
         ui.checkbox("subclasses", value=self.with_subclasses).bind_value(
             self, "with_subclasses"
         )
@@ -46,9 +74,8 @@ class TrulyTabularConfig:
             "\x1f": "US - ASCII(31)",
         }
         webserver.add_select("List separator",list_separators).bind_value(self,"list_separator")
-
-
-
+        webserver.add_select("Endpoint",list(self.endpoints.keys())).bind_value(self,"endpoint_name")
+  
 class TrulyTabularDisplay:
     """
     Displays a truly tabular analysis for a given Wikidata
@@ -87,7 +114,9 @@ class TrulyTabularDisplay:
                         self.item_count_view = ui.html()
                 with splitter.after as self.query_display_container:
                     self.count_query_display = QueryDisplay(
-                        self.webserver, name="count query"
+                        self.webserver, 
+                        name="count query",
+                        sparql_endpoint=self.config.sparql_endpoint
                     )
         # immediately do an async call of update view
         ui.timer(0, self.update_view, once=True)
@@ -121,6 +150,8 @@ class TrulyTabularDisplay:
             itemQid=self.qid,
             subclassPredicate=self.config.subclass_predicate,
             debug=self.webserver.debug,
-        )  # Initialize TrulyTabular with the qid
+        )
+        self.count_query_display.sparql_endpoint=self.config.sparql_endpoint  
+        # Initialize TrulyTabular with the qid
         self.update_item_link_view()
         await run.io_bound(self.update_item_count_view)
