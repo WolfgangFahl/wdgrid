@@ -19,6 +19,7 @@ from SPARQLWrapper.SPARQLExceptions import EndPointInternalError
 
 from wd.pareto import Pareto
 from wd.query_view import QueryView
+from ngwidgets.progress import NiceguiProgressbar
 
 
 @dataclass
@@ -275,7 +276,7 @@ class TrulyTabularDisplay:
         """
         set up the user interface
         """
-        with ui.element("div").classes("w-full"):
+        with ui.element("div").classes("w-full") as self.main_container:
             with ui.splitter() as splitter:
                 with splitter.before:
                     self.item_input = ui.input(
@@ -295,80 +296,13 @@ class TrulyTabularDisplay:
                         name="property Query",
                         sparql_endpoint=self.config.sparql_endpoint,
                     )
+            with ui.row() as self.progressbar_row:
+                self.progress_bar=NiceguiProgressbar(total=0,desc="Property statistics", unit="prop")
             with ui.row() as self.property_grid_row:
                 self.property_grid = ListOfDictsGrid()
         # immediately do an async call of update view
         ui.timer(0, self.update_view, once=True)
-
-    def update_item_count_view(self):
-        """
-        update the item count
-        """
-        try:
-            self.ttcount, countQuery = self.tt.count()
-            with self.query_display_container:
-                self.count_query_view.show_query(countQuery)
-            with self.item_row:
-                if self.tt.error:
-                    self.item_count_view.content = "❓"
-                else:
-                    self.item_count_view.content = f"{self.ttcount} instances found"
-                    self.update_property_query_view(total=self.ttcount)
-        except Exception as ex:
-            self.handle_exception(ex)
-
-    def update_property_query_view(self, total: int):
-        """
-        update the property query view
-        """
-        pareto = self.config.pareto
-        if total is not None:
-            min_count = round(total / pareto.oneOutOf)
-        else:
-            min_count = 0
-        with self.query_display_container:
-            msg = f"searching properties with at least {min_count} usages"
-            ui.notify(msg)
-            mfp_query = self.tt.mostFrequentPropertiesQuery(minCount=min_count)
-            self.property_query_view.show_query(mfp_query.query)
-            self.update_properties_table(mfp_query)
-
-    def update_properties_table(self, mfp_query):
-        """
-        update my properties table
-
-        Args:
-            mfp_query(Query): the query for the most frequently used properties
-        """
-        with self.query_display_container:
-            msg = f"running query for most frequently used properties of {str(self.tt)} ..."
-            ui.notify(msg)
-            try:
-                property_lod = self.tt.sparql.queryAsListOfDicts(mfp_query.query)
-            except EndPointInternalError as ex:
-                if self.isTimeoutException(ex):
-                    raise Exception("Query timeout of the property table query")
-            self.min_property_frequency = self.config.pareto.asPercent()
-            self.property_selection = PropertySelection(
-                property_lod,
-                total=self.ttcount,
-                paretoLevels=self.config.pareto_levels,
-                minFrequency=self.min_property_frequency,
-            )
-            self.property_selection.prepare()
-            with self.property_grid_row:
-                view_lod = self.property_selection.propertyList
-                self.property_grid.load_lod(view_lod)
-                self.property_grid.set_checkbox_selection("#")
-                # https://www.ag-grid.com/javascript-data-grid/grid-interface/#grid-events
-                # self.property_grid.ag_grid.on('cellClicked', lambda event: ui.notify(f'Cell value: {event.args["value"]}'))
-                # self.property_grid.ag_grid.on('cellDoubleClicked', lambda event: ui.notify(f'Cell value: {event.args["value"]}'))
-                # self.property_grid.ag_grid.on('rowSelected', lambda event: ui.notify(f'selected row: {event.args["rowIndex"]}'))
-                self.property_grid.ag_grid.on(
-                    "selectionChanged", self.on_property_grid_selection_change
-                )
-                self.property_grid.update()
-
+        
     def createTrulyTabular(self, itemQid: str, propertyIds=[]):
         """
         create a Truly Tabular configuration for my configure endpoint and the given itemQid and
@@ -442,6 +376,84 @@ class TrulyTabularDisplay:
                     self.property_grid.update_cell(row_key, col_key, value)
             self.property_grid.update()        
             pass
+
+    def update_item_count_view(self):
+        """
+        update the item count
+        """
+        try:
+            self.ttcount, countQuery = self.tt.count()
+            with self.query_display_container:
+                self.count_query_view.show_query(countQuery)
+            with self.item_row:
+                if self.tt.error:
+                    self.item_count_view.content = "❓"
+                else:
+                    self.item_count_view.content = f"{self.ttcount} instances found"
+                    self.update_property_query_view(total=self.ttcount)
+        except Exception as ex:
+            self.handle_exception(ex)
+
+    def update_property_query_view(self, total: int):
+        """
+        update the property query view
+        """
+        pareto = self.config.pareto
+        if total is not None:
+            min_count = round(total / pareto.oneOutOf)
+        else:
+            min_count = 0
+        msg = f"searching properties with at least {min_count} usages"
+        ui.notify(msg)
+        mfp_query = self.tt.mostFrequentPropertiesQuery(minCount=min_count)
+        self.property_query_view.show_query(mfp_query.query)
+        self.update_properties_table(mfp_query)
+
+    def update_properties_table(self, mfp_query):
+        """
+        update my properties table
+
+        Args:
+            mfp_query(Query): the query for the most frequently used properties
+        """
+        with self.query_display_container:
+            msg = f"running query for most frequently used properties of {str(self.tt)} ..."
+            ui.notify(msg)
+            try:
+                property_lod = self.tt.sparql.queryAsListOfDicts(mfp_query.query)
+            except EndPointInternalError as ex:
+                if self.isTimeoutException(ex):
+                    raise Exception("Query timeout of the property table query")
+            self.min_property_frequency = self.config.pareto.asPercent()
+            self.property_selection = PropertySelection(
+                property_lod,
+                total=self.ttcount,
+                paretoLevels=self.config.pareto_levels,
+                minFrequency=self.min_property_frequency,
+            )
+            self.property_selection.prepare()
+            with self.property_grid_row:
+                self.view_lod = self.property_selection.propertyList
+                self.property_grid.load_lod(self.view_lod)
+                self.property_grid.set_checkbox_selection("#")             
+                self.property_grid.update()
+        self.update_property_stats()
+
+    def update_property_stats(self):
+        """
+        update the property statistics
+        """
+        count=len(self.property_selection.propertyList)
+        ui.notify(f"Getting property statistics for {count} properties")
+        self.progress_bar.total=count
+        self.progress_bar.reset()
+        for row in self.property_selection.propertyList:
+            self.get_stats_rows([row])
+            self.progress_bar.update(1)
+            pass
+        self.progress_bar.reset()
+        ui.notify(f"Done getting statistics for {count} properties")
+    
 
     async def on_property_grid_selection_change(self, event):
         """
