@@ -39,6 +39,8 @@ class TrulyTabularConfig:
     endpoint_name: str = "wikidata"
     with_subclasses: bool = False
     pareto_level = 1
+    # minimum percentual frequency of availability
+    min_property_frequency = 20.0
 
     def __post_init__(self):
         """
@@ -104,6 +106,7 @@ class TrulyTabularConfig:
             webserver.add_select("Pareto level", self.pareto_select).bind_value(
                 self, "pareto_level"
             )
+
 
 class PropertySelection:
     """
@@ -285,9 +288,15 @@ class TrulyTabularDisplay:
                         self.item_link_view = ui.html()
                         self.item_count_view = ui.html()
                     with ui.row():
-                        self.webserver.add_select("Pareto level", self.config.pareto_select,on_change=self.on_pareto_change).bind_value(
-                            self.config, "pareto_level"
-                    )
+                        self.webserver.add_select(
+                            "Pareto level",
+                            self.config.pareto_select,
+                            on_change=self.on_pareto_change,
+                        ).bind_value(self.config, "pareto_level")
+                        self.min_property_frequency_input = ui.input(
+                            "min%",
+                            value=str(self.config.min_property_frequency),
+                        ).on('keydown.enter',self.on_min_property_frequency_change)
                 with splitter.after as self.query_display_container:
                     self.count_query_view = QueryView(
                         self.webserver,
@@ -300,12 +309,14 @@ class TrulyTabularDisplay:
                         sparql_endpoint=self.config.sparql_endpoint,
                     )
             with ui.row() as self.progressbar_row:
-                self.progress_bar=NiceguiProgressbar(total=0,desc="Property statistics", unit="prop")
+                self.progress_bar = NiceguiProgressbar(
+                    total=0, desc="Property statistics", unit="prop"
+                )
             with ui.row() as self.property_grid_row:
                 self.property_grid = ListOfDictsGrid()
         # immediately do an async call of update view
         ui.timer(0, self.update_display, once=True)
-        
+
     def createTrulyTabular(self, itemQid: str, propertyIds=[]):
         """
         create a Truly Tabular configuration for my configure endpoint and the given itemQid and
@@ -355,20 +366,36 @@ class TrulyTabularDisplay:
             self.handleException(ex)
             return None
 
-    async def on_pareto_change(self,_event):
+    async def on_min_property_frequency_change(self, _event):
+        """
+        handle a change in the minimum property frequency input
+        """
+        value_str = self.min_property_frequency_input.value
+        try:
+            self.config.min_property_frequency = float(value_str)
+            ui.notify(f"new freq: {self.config.min_property_frequency}")
+            await self.update_display()
+        except Exception as _ex:
+            ui.notify(f"invalid frequency value {value_str}")
+            pass
+
+    async def on_pareto_change(self, _event):
         """
         handle changes in the pareto level
         """
         ui.notify(f"pareto level changed to {self.config.pareto_level} ")
-        await self.update_display()
-        
+        self.config.min_property_frequency = self.config.pareto.asPercent()
+        self.min_property_frequency_input.value = str(
+            self.config.min_property_frequency
+        )
+
     def get_stats_rows(self, property_grid_rows: list):
         """
         get the statistic rows for the given property_grid_rows
         """
         for row in property_grid_rows:
             property_id = row["propertyId"]
-            row_key=row["#"]
+            row_key = row["#"]
             stats_row = self.wikiTrulyTabularPropertyStats(self.tt.itemQid, property_id)
             if stats_row:
                 stats_row["✔"] = "✔"
@@ -384,7 +411,7 @@ class TrulyTabularDisplay:
                 if statsColumn in stats_row:
                     value = stats_row[statsColumn]
                     self.property_grid.update_cell(row_key, col_key, value)
-            self.property_grid.update()        
+            self.property_grid.update()
             pass
 
     def update_item_count_view(self):
@@ -394,12 +421,12 @@ class TrulyTabularDisplay:
         try:
             self.ttcount, countQuery = self.tt.count()
             self.count_query_view.show_query(countQuery)
-            with self.item_row:
-                if self.tt.error:
-                    self.item_count_view.content = "❓"
-                else:
-                    self.item_count_view.content = f"{self.ttcount} instances found"
-                    self.update_property_query_view(total=self.ttcount)
+            content = "❓" if self.tt.error else f"{self.ttcount} instances found"           
+            with self.item_row:    
+                self.item_count_view.content = content
+            if not self.tt.error:
+                self.update_property_query_view(total=self.ttcount)
+    
         except Exception as ex:
             self.handle_exception(ex)
 
@@ -409,7 +436,7 @@ class TrulyTabularDisplay:
         """
         pareto = self.config.pareto
         if total is not None:
-            min_count = round(total / pareto.oneOutOf)
+            min_count = round(total * self.config.min_property_frequency/100.0)
         else:
             min_count = 0
         msg = f"searching properties with at least {min_count} usages"
@@ -434,18 +461,17 @@ class TrulyTabularDisplay:
             except EndPointInternalError as ex:
                 if self.isTimeoutException(ex):
                     raise Exception("Query timeout of the property table query")
-            self.min_property_frequency = self.config.pareto.asPercent()
             self.property_selection = PropertySelection(
                 property_lod,
                 total=self.ttcount,
                 paretoLevels=self.config.pareto_levels,
-                minFrequency=self.min_property_frequency,
+                minFrequency=self.config.min_property_frequency,
             )
             self.property_selection.prepare()
             with self.property_grid_row:
                 self.view_lod = self.property_selection.propertyList
                 self.property_grid.load_lod(self.view_lod)
-                self.property_grid.set_checkbox_selection("#")             
+                self.property_grid.set_checkbox_selection("#")
                 self.property_grid.update()
         self.update_property_stats()
 
@@ -453,17 +479,19 @@ class TrulyTabularDisplay:
         """
         update the property statistics
         """
-        count=len(self.property_selection.propertyList)
-        ui.notify(f"Getting property statistics for {count} properties")
-        self.progress_bar.total=count
-        self.progress_bar.reset()
+        count = len(self.property_selection.propertyList)
+        with self.main_container:
+            ui.notify(f"Getting property statistics for {count} properties")
+            self.progress_bar.total = count
+            self.progress_bar.reset()
         for row in self.property_selection.propertyList:
             self.get_stats_rows([row])
-            self.progress_bar.update(1)
+            with self.main_container:
+                self.progress_bar.update(1)
             pass
-        self.progress_bar.reset()
-        ui.notify(f"Done getting statistics for {count} properties")
-    
+        with self.main_container:
+            self.progress_bar.reset()
+            ui.notify(f"Done getting statistics for {count} properties")
 
     async def on_property_grid_selection_change(self, event):
         """
@@ -483,8 +511,7 @@ class TrulyTabularDisplay:
             self.item_link_view.content = item_link
 
     async def update_display(self):
-        """
-        """
+        """ """
         self.tt = self.createTrulyTabular(self.qid)
         for query_view in self.count_query_view, self.property_query_view:
             query_view.sparql_endpoint = self.config.sparql_endpoint

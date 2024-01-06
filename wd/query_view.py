@@ -8,7 +8,6 @@ from ngwidgets.widgets import Link
 from lodstorage.query import Query, Endpoint
 from nicegui import ui
 
-
 class QueryView():
     """
     widget to display queries
