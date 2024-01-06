@@ -105,7 +105,6 @@ class TrulyTabularConfig:
                 self, "pareto_level"
             )
 
-
 class PropertySelection:
     """
     select properties
@@ -280,11 +279,15 @@ class TrulyTabularDisplay:
             with ui.splitter() as splitter:
                 with splitter.before:
                     self.item_input = ui.input(
-                        "item", value=self.qid, on_change=self.update_view
+                        "item", value=self.qid, on_change=self.update_display
                     ).bind_value(self, "qid")
                     with ui.row() as self.item_row:
                         self.item_link_view = ui.html()
                         self.item_count_view = ui.html()
+                    with ui.row():
+                        self.webserver.add_select("Pareto level", self.config.pareto_select,on_change=self.on_pareto_change).bind_value(
+                            self.config, "pareto_level"
+                    )
                 with splitter.after as self.query_display_container:
                     self.count_query_view = QueryView(
                         self.webserver,
@@ -301,7 +304,7 @@ class TrulyTabularDisplay:
             with ui.row() as self.property_grid_row:
                 self.property_grid = ListOfDictsGrid()
         # immediately do an async call of update view
-        ui.timer(0, self.update_view, once=True)
+        ui.timer(0, self.update_display, once=True)
         
     def createTrulyTabular(self, itemQid: str, propertyIds=[]):
         """
@@ -352,6 +355,13 @@ class TrulyTabularDisplay:
             self.handleException(ex)
             return None
 
+    async def on_pareto_change(self,_event):
+        """
+        handle changes in the pareto level
+        """
+        ui.notify(f"pareto level changed to {self.config.pareto_level} ")
+        await self.update_display()
+        
     def get_stats_rows(self, property_grid_rows: list):
         """
         get the statistic rows for the given property_grid_rows
@@ -383,8 +393,7 @@ class TrulyTabularDisplay:
         """
         try:
             self.ttcount, countQuery = self.tt.count()
-            with self.query_display_container:
-                self.count_query_view.show_query(countQuery)
+            self.count_query_view.show_query(countQuery)
             with self.item_row:
                 if self.tt.error:
                     self.item_count_view.content = "❓"
@@ -404,7 +413,8 @@ class TrulyTabularDisplay:
         else:
             min_count = 0
         msg = f"searching properties with at least {min_count} usages"
-        ui.notify(msg)
+        with self.main_container:
+            ui.notify(msg)
         mfp_query = self.tt.mostFrequentPropertiesQuery(minCount=min_count)
         self.property_query_view.show_query(mfp_query.query)
         self.update_properties_table(mfp_query)
@@ -472,8 +482,9 @@ class TrulyTabularDisplay:
             item_link = Link.create(item_url, item_text)
             self.item_link_view.content = item_link
 
-    async def update_view(self):
-        # todo add details such as endpointConf
+    async def update_display(self):
+        """
+        """
         self.tt = self.createTrulyTabular(self.qid)
         for query_view in self.count_query_view, self.property_query_view:
             query_view.sparql_endpoint = self.config.sparql_endpoint
