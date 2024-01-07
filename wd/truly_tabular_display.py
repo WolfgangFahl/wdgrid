@@ -3,6 +3,7 @@ Created on 2024-01-04
 
 @author: wf
 """
+import asyncio
 import collections
 from dataclasses import dataclass
 from typing import Dict, List, Tuple
@@ -251,6 +252,9 @@ class TrulyTabularDisplay:
         self.qid = qid
         self.tt = None
         self.setup()
+        
+    async def ui_yield(self):
+        await asyncio.sleep(0) # allow other tasks to run on the event loop        
 
     def handle_exception(self, ex):
         """
@@ -296,7 +300,7 @@ class TrulyTabularDisplay:
                         self.min_property_frequency_input = ui.input(
                             "min%",
                             value=str(self.config.min_property_frequency),
-                        ).on('keydown.enter',self.on_min_property_frequency_change)
+                        ).on("keydown.enter", self.on_min_property_frequency_change)
                 with splitter.after as self.query_display_container:
                     self.count_query_view = QueryView(
                         self.webserver,
@@ -308,6 +312,11 @@ class TrulyTabularDisplay:
                         name="property Query",
                         sparql_endpoint=self.config.sparql_endpoint,
                     )
+            with ui.row() as self.generate_button_row:
+                self.generate_button = ui.button(
+                    "Generate SPARQL queries", on_click=self.on_generate_button_click
+                )
+                self.generate_button.disable()
             with ui.row() as self.progressbar_row:
                 self.progress_bar = NiceguiProgressbar(
                     total=0, desc="Property statistics", unit="prop"
@@ -363,8 +372,76 @@ class TrulyTabularDisplay:
                 statsRow[f"{key}TryIt"] = tryItLink
             return statsRow
         except (BaseException, HTTPError) as ex:
-            self.handleException(ex)
+            self.handle_exception(ex)
             return None
+
+    def getPropertyIdMap(self):
+        """
+        get the map of selected property ids
+        with generation hints
+
+        Returns:
+            dict: a dict of list
+        """
+        idMap = {}
+        cols = PropertySelection.aggregates.copy()
+        cols.extend(["label", "ignore"])
+        for row in self.property_selection.propertyList:
+            if self.isSelected(row, "select"):
+                propertyId = row.getCellValue("propertyId")
+                genList = []
+                for col in cols:
+                    if self.isSelected(row, col):
+                        genList.append(col)
+                idMap[propertyId] = genList
+        return idMap
+
+    def generateQueries(self):
+        """
+        generate and show the queries
+        """
+        propertyIdMap = self.getPropertyIdMap()
+        tt = self.createTrulyTabular(
+            itemQid=self.itemQid, propertyIds=list(propertyIdMap.keys())
+        )
+        if self.naiveQueryDisplay is None:
+            self.naiveQueryDisplay = self.createQueryDisplay(
+                "naive Query", a=self.colB3, wdItem=tt.item
+            )
+        if self.aggregateQueryDisplay is None:
+            self.aggregateQueryDisplay = self.createQueryDisplay(
+                "aggregate Query", a=self.colC3, wdItem=tt.item
+            )
+        sparqlQuery = tt.generateSparqlQuery(
+            genMap=propertyIdMap,
+            naive=True,
+            lang=self.language,
+            listSeparator=self.listSeparator,
+        )
+        naiveSparqlQuery = Query(name="naive SPARQL Query", query=sparqlQuery)
+        self.naiveQueryDisplay.showSyntaxHighlightedQuery(naiveSparqlQuery)
+        sparqlQuery = tt.generateSparqlQuery(
+            genMap=propertyIdMap,
+            naive=False,
+            lang=self.language,
+            listSeparator=self.listSeparator,
+        )
+        self.aggregateSparqlQuery = Query(
+            name="aggregate SPARQL Query", query=sparqlQuery
+        )
+        self.aggregateQueryDisplay.showSyntaxHighlightedQuery(self.aggregateSparqlQuery)
+        ui.notify("SPARQL queries generated")
+        pass
+
+    async def on_generate_button_click(self, _event):
+        """
+        handle the generate button click
+        """
+        try:
+            ui.notify(f"generating SPARQL query for {str(self.tt)}")
+            self.generateQueries()
+        except BaseException as ex:
+            self.handleException(ex)
 
     async def on_min_property_frequency_change(self, _event):
         """
@@ -399,6 +476,8 @@ class TrulyTabularDisplay:
             stats_row = self.wikiTrulyTabularPropertyStats(self.tt.itemQid, property_id)
             if stats_row:
                 stats_row["✔"] = "✔"
+            else:
+                stats_row={"✔": "❌"}
             for col_key, statsColumn in [
                 ("1", "1"),
                 ("maxf", "maxf"),
@@ -421,12 +500,12 @@ class TrulyTabularDisplay:
         try:
             self.ttcount, countQuery = self.tt.count()
             self.count_query_view.show_query(countQuery)
-            content = "❓" if self.tt.error else f"{self.ttcount} instances found"           
-            with self.item_row:    
+            content = "❓" if self.tt.error else f"{self.ttcount} instances found"
+            with self.item_row:
                 self.item_count_view.content = content
             if not self.tt.error:
                 self.update_property_query_view(total=self.ttcount)
-    
+
         except Exception as ex:
             self.handle_exception(ex)
 
@@ -434,18 +513,21 @@ class TrulyTabularDisplay:
         """
         update the property query view
         """
-        pareto = self.config.pareto
-        if total is not None:
-            min_count = round(total * self.config.min_property_frequency/100.0)
-        else:
-            min_count = 0
-        msg = f"searching properties with at least {min_count} usages"
-        with self.main_container:
-            ui.notify(msg)
-        mfp_query = self.tt.mostFrequentPropertiesQuery(minCount=min_count)
-        self.property_query_view.show_query(mfp_query.query)
-        self.update_properties_table(mfp_query)
-
+        try:
+            pareto = self.config.pareto
+            if total is not None:
+                min_count = round(total * self.config.min_property_frequency / 100.0)
+            else:
+                min_count = 0
+            msg = f"searching properties with at least {min_count} usages"
+            with self.main_container:
+                ui.notify(msg)
+            mfp_query = self.tt.mostFrequentPropertiesQuery(minCount=min_count)
+            self.property_query_view.show_query(mfp_query.query)
+            self.update_properties_table(mfp_query)
+        except Exception as ex:
+            self.handle_exception(ex)
+            
     def update_properties_table(self, mfp_query):
         """
         update my properties table
@@ -453,9 +535,10 @@ class TrulyTabularDisplay:
         Args:
             mfp_query(Query): the query for the most frequently used properties
         """
-        with self.query_display_container:
-            msg = f"running query for most frequently used properties of {str(self.tt)} ..."
-            ui.notify(msg)
+        try:
+            with self.query_display_container:
+                msg = f"running query for most frequently used properties of {str(self.tt)} ..."
+                ui.notify(msg)
             try:
                 property_lod = self.tt.sparql.queryAsListOfDicts(mfp_query.query)
             except EndPointInternalError as ex:
@@ -473,26 +556,33 @@ class TrulyTabularDisplay:
                 self.property_grid.load_lod(self.view_lod)
                 self.property_grid.set_checkbox_selection("#")
                 self.property_grid.update()
-        self.update_property_stats()
-
+            self.update_property_stats()
+        except Exception as ex:
+            self.handle_exception(ex)
+            
     def update_property_stats(self):
         """
         update the property statistics
         """
-        count = len(self.property_selection.propertyList)
-        with self.main_container:
-            ui.notify(f"Getting property statistics for {count} properties")
-            self.progress_bar.total = count
-            self.progress_bar.reset()
-        for row in self.property_selection.propertyList:
-            self.get_stats_rows([row])
+        try:
+            count = len(self.property_selection.propertyList)
             with self.main_container:
-                self.progress_bar.update(1)
+                ui.notify(f"Getting property statistics for {count} properties")
+                self.progress_bar.total = count
+                self.progress_bar.reset()
+            for row in self.property_selection.propertyList:
+                # run in background
+                asyncio.run(run.io_bound(self.get_stats_rows,[row]))
+                with self.main_container:
+                    self.progress_bar.update(1)
             pass
-        with self.main_container:
-            self.progress_bar.reset()
-            ui.notify(f"Done getting statistics for {count} properties")
-
+            with self.main_container:
+                self.progress_bar.reset()
+                ui.notify(f"Done getting statistics for {count} properties")
+                self.generate_button.enable()
+        except Exception as ex:
+            self.handle_exception(ex)
+            
     async def on_property_grid_selection_change(self, event):
         """
         the property grid selection has changed
@@ -503,7 +593,7 @@ class TrulyTabularDisplay:
             ui.notify(f"Selection changed: {selected_rows}")
             await run.io_bound(self.get_stats_rows, selected_rows)
 
-    def update_item_link_view(self):
+    async def update_item_link_view(self):
         with self.item_row:
             item_text = self.tt.item.asText(long=True)
             item_url = self.tt.item.url
@@ -511,10 +601,17 @@ class TrulyTabularDisplay:
             self.item_link_view.content = item_link
 
     async def update_display(self):
-        """ """
-        self.tt = self.createTrulyTabular(self.qid)
-        for query_view in self.count_query_view, self.property_query_view:
-            query_view.sparql_endpoint = self.config.sparql_endpoint
-        # Initialize TrulyTabular with the qid
-        self.update_item_link_view()
-        await run.io_bound(self.update_item_count_view)
+        """ 
+        update the display
+        """
+        try:
+            if self.webserver.log_view:
+                self.webserver.log_view.clear()
+            self.tt = self.createTrulyTabular(self.qid)
+            for query_view in self.count_query_view, self.property_query_view:
+                query_view.sparql_endpoint = self.config.sparql_endpoint
+            # Initialize TrulyTabular with the qid
+            await self.update_item_link_view()
+            await run.io_bound(self.update_item_count_view)
+        except Exception as ex:
+            self.handle_exception(ex)
