@@ -560,7 +560,7 @@ class TrulyTabularDisplay:
         """
         # render generation spec columns as checkboxes
         for col in self.property_selection.checkbox_cols:
-        #    self.property_grid.set_checkbox_renderer(col)
+            self.property_grid.set_checkbox_renderer(col)
             pass
         for row in self.property_selection.propertyList:
             has_min_frequency=self.property_selection.hasMinFrequency(row)
