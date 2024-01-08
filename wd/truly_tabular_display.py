@@ -559,8 +559,9 @@ class TrulyTabularDisplay:
         prepare the interactive generation specification
         """
         # render generation spec columns as checkboxes
-        #for col in self.property_selection.checkbox_cols:
+        for col in self.property_selection.checkbox_cols:
         #    self.property_grid.set_checkbox_renderer(col)
+            pass
         for row in self.property_selection.propertyList:
             has_min_frequency=self.property_selection.hasMinFrequency(row)
             row["count"]=True
@@ -570,6 +571,8 @@ class TrulyTabularDisplay:
             else:
                 row["ignore"]=True
             pass
+        col_def=self.property_grid.get_column_def("#")
+        col_def["headerCheckboxSelection"]=True
         self.property_grid.update()
         self.property_grid.select_all_rows()
         self.generate_button.enable()
