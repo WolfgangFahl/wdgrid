@@ -45,7 +45,7 @@ class QueryView():
         Args:
             sparql_query (str): The SPARQL query string to be displayed.
         """
-        self.sparql_query=sparql_query
+        self.sparql_query=sparql_query.strip()
         # we might need to change the endpoint
         self.query=Query(name=self.name,query=sparql_query)
         if self.sparql_endpoint:
