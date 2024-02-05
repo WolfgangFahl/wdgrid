@@ -28,7 +28,7 @@ class WdgridWebServer(InputWebserver):
             short_name="wdgrid",
             copy_right=copy_right,
             version=Version(),
-            default_port=9999,
+            default_port=9997,
         )
         server_config = WebserverConfig.get(config)
         server_config.solution_class = WdgridSolution
