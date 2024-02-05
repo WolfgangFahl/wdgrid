@@ -11,8 +11,8 @@ from urllib.error import HTTPError
 
 from lodstorage.query import Endpoint, EndpointManager, Query
 from lodstorage.trulytabular import TrulyTabular
-from ngwidgets.lod_grid import ListOfDictsGrid, GridConfig
-from ngwidgets.webserver import NiceGuiWebserver
+from ngwidgets.lod_grid import GridConfig, ListOfDictsGrid
+from ngwidgets.progress import NiceguiProgressbar
 from ngwidgets.widgets import Lang, Link
 from nicegui import run, ui
 from numpy.random.mtrand import pareto
@@ -20,8 +20,6 @@ from SPARQLWrapper.SPARQLExceptions import EndPointInternalError
 
 from wd.pareto import Pareto
 from wd.query_view import QueryView
-from ngwidgets.progress import NiceguiProgressbar
-from pydantic_core.core_schema import NoneSchema
 
 
 @dataclass
@@ -113,7 +111,8 @@ class TrulyTabularConfig:
 class PropertySelection:
     """
     select properties
-    """    
+    """
+
     def __init__(
         self,
         inputList,
@@ -145,23 +144,23 @@ class PropertySelection:
             orecord = collections.OrderedDict(record.copy())
             self.propertyList.append(orecord)
         pass
-    
+
     @property
-    def aggregates(self)->list:
+    def aggregates(self) -> list:
         aggregates = ["min", "max", "avg", "sample", "list", "count"]
         return aggregates
-    
+
     @property
-    def option_cols(self)->list:
-        option_cols=["ignore", "label"]
+    def option_cols(self) -> list:
+        option_cols = ["ignore", "label"]
         return option_cols
-    
+
     @property
-    def checkbox_cols(self)->list:
+    def checkbox_cols(self) -> list:
         """
         get all my checkbox columns
         """
-        checkbox_cols=self.aggregates
+        checkbox_cols = self.aggregates
         checkbox_cols.extend(self.option_cols)
         return checkbox_cols
 
@@ -259,23 +258,17 @@ class TrulyTabularDisplay:
     item
     """
 
-    def __init__(self, webserver: NiceGuiWebserver, qid: str):
-        self.webserver = webserver
-        self.config = webserver.tt_config
+    def __init__(self, solution: "WdgridSolution", qid: str):
+        self.solution = solution
+        self.config = solution.tt_config
         self.qid = qid
         self.tt = None
-        self.naive_query_view=None
-        self.aggregate_query_view=None
+        self.naive_query_view = None
+        self.aggregate_query_view = None
         self.setup()
-        
-    async def ui_yield(self):
-        await asyncio.sleep(0) # allow other tasks to run on the event loop        
 
-    def handle_exception(self, ex):
-        """
-        delegate handle_exception calls
-        """
-        self.webserver.handle_exception(ex, self.webserver.do_trace)
+    async def ui_yield(self):
+        await asyncio.sleep(0)  # allow other tasks to run on the event loop
 
     @staticmethod
     def isTimeoutException(ex: EndPointInternalError):
@@ -307,7 +300,7 @@ class TrulyTabularDisplay:
                         self.item_link_view = ui.html()
                         self.item_count_view = ui.html()
                     with ui.row():
-                        self.webserver.add_select(
+                        self.solution.add_select(
                             "Pareto level",
                             self.config.pareto_select,
                             on_change=self.on_pareto_change,
@@ -318,12 +311,12 @@ class TrulyTabularDisplay:
                         ).on("keydown.enter", self.on_min_property_frequency_change)
                 with splitter.after as self.query_display_container:
                     self.count_query_view = QueryView(
-                        self.webserver,
+                        self.solution,
                         name="count Query",
                         sparql_endpoint=self.config.sparql_endpoint,
                     )
                     self.property_query_view = QueryView(
-                        self.webserver,
+                        self.solution,
                         name="property Query",
                         sparql_endpoint=self.config.sparql_endpoint,
                     )
@@ -337,7 +330,7 @@ class TrulyTabularDisplay:
                     total=0, desc="Property statistics", unit="prop"
                 )
             with ui.row() as self.property_grid_row:
-                config=GridConfig(multiselect=True)
+                config = GridConfig(multiselect=True)
                 self.property_grid = ListOfDictsGrid(config=config)
         # immediately do an async call of update view
         ui.timer(0, self.update_display, once=True)
@@ -356,7 +349,7 @@ class TrulyTabularDisplay:
             propertyIds=propertyIds,
             subclassPredicate=self.config.subclass_predicate,
             endpointConf=self.config.sparql_endpoint,
-            debug=self.webserver.debug,
+            debug=self.solution.debug,
         )
         return tt
 
@@ -391,7 +384,7 @@ class TrulyTabularDisplay:
             self.handle_exception(ex)
             return None
 
-    async def getPropertyIdMap(self)->Dict:
+    async def getPropertyIdMap(self) -> Dict:
         """
         get the map of selected property ids
         with generation specs
@@ -401,13 +394,13 @@ class TrulyTabularDisplay:
         """
         idMap = {}
         cols = self.property_selection.checkbox_cols
-        selected_rows= await self.property_grid.get_selected_rows()
+        selected_rows = await self.property_grid.get_selected_rows()
         for srow in selected_rows:
             propertyId = srow["propertyId"]
             key_value = srow["#"]
             genList = []
             for col_key in cols:
-                checked=self.property_grid.get_cell_value(key_value, col_key)   
+                checked = self.property_grid.get_cell_value(key_value, col_key)
                 if checked:
                     genList.append(col_key)
             idMap[propertyId] = genList
@@ -422,21 +415,21 @@ class TrulyTabularDisplay:
             tt = self.createTrulyTabular(
                 itemQid=self.qid, propertyIds=list(propertyIdMap.keys())
             )
-            
+
             if self.naive_query_view is None:
                 with self.query_display_container:
-                    self.naive_query_view=QueryView(
-                            self.webserver,
-                            name="naive Query",
-                            sparql_endpoint=self.config.sparql_endpoint,
-                        )
+                    self.naive_query_view = QueryView(
+                        self.solution,
+                        name="naive Query",
+                        sparql_endpoint=self.config.sparql_endpoint,
+                    )
             if self.aggregate_query_view is None:
                 with self.query_display_container:
-                    self.aggregate_query_view=QueryView(
-                            self.webserver,
-                            name="aggregate Query",
-                            sparql_endpoint=self.config.sparql_endpoint,
-                        )
+                    self.aggregate_query_view = QueryView(
+                        self.solution,
+                        name="aggregate Query",
+                        sparql_endpoint=self.config.sparql_endpoint,
+                    )
             sparqlQuery = tt.generateSparqlQuery(
                 genMap=propertyIdMap,
                 naive=True,
@@ -503,7 +496,7 @@ class TrulyTabularDisplay:
             if stats_row:
                 stats_row["✔"] = "✔"
             else:
-                stats_row={"✔": "❌"}
+                stats_row = {"✔": "❌"}
             for col_key, statsColumn in [
                 ("1", "1"),
                 ("maxf", "maxf"),
@@ -553,7 +546,7 @@ class TrulyTabularDisplay:
             self.update_properties_table(mfp_query)
         except Exception as ex:
             self.handle_exception(ex)
-            
+
     def prepare_generation_specs(self):
         """
         prepare the interactive generation specification
@@ -563,20 +556,20 @@ class TrulyTabularDisplay:
             self.property_grid.set_checkbox_renderer(col)
             pass
         for row in self.property_selection.propertyList:
-            has_min_frequency=self.property_selection.hasMinFrequency(row)
-            row["count"]=True
+            has_min_frequency = self.property_selection.hasMinFrequency(row)
+            row["count"] = True
             if has_min_frequency:
                 if row["type"] == "WikibaseItem":
-                    row["label"]=True
+                    row["label"] = True
             else:
-                row["ignore"]=True
+                row["ignore"] = True
             pass
-        col_def=self.property_grid.get_column_def("#")
-        col_def["headerCheckboxSelection"]=True
+        col_def = self.property_grid.get_column_def("#")
+        col_def["headerCheckboxSelection"] = True
         self.property_grid.update()
         self.property_grid.select_all_rows()
         self.generate_button.enable()
-            
+
     def update_properties_table(self, mfp_query):
         """
         update my properties table
@@ -609,7 +602,7 @@ class TrulyTabularDisplay:
             self.prepare_generation_specs()
         except Exception as ex:
             self.handle_exception(ex)
-            
+
     def update_property_stats(self):
         """
         update the property statistics
@@ -622,16 +615,16 @@ class TrulyTabularDisplay:
                 self.progress_bar.reset()
             for row in self.property_selection.propertyList:
                 # run in background
-                asyncio.run(run.io_bound(self.get_stats_rows,[row]))
+                asyncio.run(run.io_bound(self.get_stats_rows, [row]))
                 with self.main_container:
                     self.progress_bar.update(1)
             pass
-            with self.main_container:  
+            with self.main_container:
                 self.progress_bar.reset()
-                ui.notify(f"Done getting statistics for {count} properties")   
+                ui.notify(f"Done getting statistics for {count} properties")
         except Exception as ex:
             self.handle_exception(ex)
-            
+
     async def on_property_grid_selection_change(self, event):
         """
         the property grid selection has changed
@@ -649,12 +642,12 @@ class TrulyTabularDisplay:
             self.item_link_view.content = item_link
 
     async def update_display(self):
-        """ 
+        """
         update the display
         """
         try:
-            if self.webserver.log_view:
-                self.webserver.log_view.clear()
+            if self.solution.log_view:
+                self.solution.log_view.clear()
             self.tt = self.createTrulyTabular(self.qid)
             for query_view in self.count_query_view, self.property_query_view:
                 query_view.sparql_endpoint = self.config.sparql_endpoint

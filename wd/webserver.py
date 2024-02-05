@@ -3,14 +3,15 @@ Created on 2024-01-03
 
 @author: wf
 """
-from ngwidgets.input_webserver import InputWebserver
+from ngwidgets.input_webserver import InputWebserver, InputWebSolution
 from ngwidgets.webserver import WebserverConfig
 from ngwidgets.widgets import Link
 from nicegui import Client, ui
 
+from wd.truly_tabular_display import TrulyTabularConfig, TrulyTabularDisplay
 from wd.version import Version
 from wd.wditem_search import WikidataItemSearch
-from wd.truly_tabular_display import TrulyTabularDisplay,TrulyTabularConfig
+
 
 class WdgridWebServer(InputWebserver):
     """
@@ -24,21 +25,36 @@ class WdgridWebServer(InputWebserver):
         """
         copy_right = "(c)2022-2024 Wolfgang Fahl"
         config = WebserverConfig(
-            copy_right=copy_right, version=Version(), default_port=9999
+            short_name="wdgrid",
+            copy_right=copy_right,
+            version=Version(),
+            default_port=9999,
         )
-        return config
+        server_config = WebserverConfig.get(config)
+        server_config.solution_class = WdgridSolution
+        return server_config
 
     def __init__(self):
         """Constructs all the necessary attributes for the WebServer object."""
         InputWebserver.__init__(self, config=WdgridWebServer.get_config())
-        self.tt_config=TrulyTabularConfig()
-        
+
         @ui.page("/tt/{qid}")
         async def truly_tabular(client: Client, qid: str):
             """
             initiate the truly tabular analysis for the given Wikidata QIDs
             """
-            await self.truly_tabular(qid)
+            await self.page(client, WdgridSolution.truly_tabular, qid)
+
+
+class WdgridSolution(InputWebSolution):
+    """
+    Wikidata Grid client specific UI
+    """
+
+    def __init__(self, webserver: WdgridWebServer, client: Client):
+        super().__init__(webserver, client)  # Call to the superclass constructor
+        self.debug = webserver.debug
+        self.tt_config = TrulyTabularConfig()
 
     async def truly_tabular(self, qid: str):
         """
@@ -47,6 +63,7 @@ class WdgridWebServer(InputWebserver):
         Args:
             qid(str): the Wikidata id of the item to analyze
         """
+
         def show():
             self.ttd = TrulyTabularDisplay(self, qid)
 
@@ -57,14 +74,14 @@ class WdgridWebServer(InputWebserver):
         extra settings
         """
         self.tt_config.setup_ui(self)
-        
-    def configure_run(self):
+
+    def prepare_ui(self):
         """
         overrideable configuration
         """
-        self.tt_config.endpoint_name=self.args.endpointName
-                
-    async def home(self, _client: Client):
+        self.tt_config.endpoint_name = self.args.endpointName
+
+    async def home(self):
         """
         provide the main content page
         """

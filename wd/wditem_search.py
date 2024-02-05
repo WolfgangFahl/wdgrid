@@ -4,13 +4,15 @@ Created on 2024-01-03
 @author: wf
 """
 import asyncio
+from typing import Callable
 
 from ngwidgets.lod_grid import ListOfDictsGrid
 from ngwidgets.webserver import NiceGuiWebserver
-from ngwidgets.widgets import Lang,Link
+from ngwidgets.widgets import Lang, Link
 from nicegui import ui
-from typing import Callable
+
 from wd.wdsearch import WikidataSearch
+
 
 class WikidataItemSearch:
     """
@@ -32,7 +34,7 @@ class WikidataItemSearch:
         self.search_debounce_task = None
         self.keyStrokeTime = 0.65  # minimum time in seconds to wait between keystrokes before starting searching
         self.search_result_row = None
-        self.setup()      
+        self.setup()
 
     def setup(self):
         """
@@ -74,7 +76,7 @@ class WikidataItemSearch:
             search_for = self.search_input.value
             if self.search_result_row:
                 with self.search_result_row:
-                    lang=self.webserver.tt_config.lang
+                    lang = self.webserver.tt_config.lang
                     ui.notify(f"searching wikidata for {search_for} ({lang})...")
                     self.wd_search.language = lang
                     wd_search_result = self.wd_search.searchOptions(
@@ -82,7 +84,7 @@ class WikidataItemSearch:
                     )
                     view_lod = self.get_selection_view_lod(wd_search_result)
                     self.search_result_grid.load_lod(view_lod)
-                    #self.search_result_grid.set_checkbox_selection("#")
+                    # self.search_result_grid.set_checkbox_selection("#")
                     self.search_result_grid.update()
         except asyncio.CancelledError:
             # The search was cancelled because of new input, so just quietly exit

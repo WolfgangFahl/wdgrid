@@ -5,6 +5,7 @@ Created on 2024-01-03
 """
 import sys
 from argparse import ArgumentParser
+
 from lodstorage.query import EndpointManager
 from ngwidgets.cmd import WebserverCmd
 
@@ -21,7 +22,12 @@ class WdgridCmd(WebserverCmd):
         override the default argparser call
         """
         parser = super().getArgParser(description, version_msg)
-        parser.add_argument('-en', '--endpointName', default="wikidata", help=f"Name of the endpoint to use for queries. Available by default: {EndpointManager.getEndpointNames(lang='sparql')}")
+        parser.add_argument(
+            "-en",
+            "--endpointName",
+            default="wikidata",
+            help=f"Name of the endpoint to use for queries. Available by default: {EndpointManager.getEndpointNames(lang='sparql')}",
+        )
         return parser
 
 
