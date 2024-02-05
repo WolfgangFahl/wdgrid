@@ -11,7 +11,8 @@ nicegui based wikidata grid and sync
 [![BITPlan](http://wiki.bitplan.com/images/wiki/thumb/3/38/BITPlanLogoFontLessTransparent.png/198px-BITPlanLogoFontLessTransparent.png)](http://www.bitplan.com)
 
 ## Demo
-* [demo](http://wikidata2.bitplan.com)
+* [RWTH Aachen i5](https://wdgrid.wikidata.dbis.rwth-aachen.de/)
+* [BITPlan](https://wdgrid.bitplan.com)
 
 ## Links
 * [Python](https://www.python.org/)
