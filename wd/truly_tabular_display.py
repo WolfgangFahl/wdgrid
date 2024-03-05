@@ -10,7 +10,7 @@ from typing import Dict, List, Tuple
 from urllib.error import HTTPError
 
 from lodstorage.query import Endpoint, EndpointManager, Query
-from lodstorage.trulytabular import TrulyTabular
+from ez_wikidata.trulytabular import TrulyTabular
 from ngwidgets.lod_grid import GridConfig, ListOfDictsGrid
 from ngwidgets.progress import NiceguiProgressbar
 from ngwidgets.widgets import Lang, Link
