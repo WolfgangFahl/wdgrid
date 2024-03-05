@@ -8,10 +8,9 @@ from typing import Callable
 
 from ngwidgets.lod_grid import ListOfDictsGrid
 from ngwidgets.webserver import NiceGuiWebserver
-from ngwidgets.widgets import Lang, Link
+from ngwidgets.widgets import Link
 from nicegui import ui
-
-from wd.wdsearch import WikidataSearch
+from ez_wikidata.wdsearch import WikidataSearch
 
 
 class WikidataItemSearch:
