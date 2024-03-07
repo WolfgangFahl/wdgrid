@@ -31,13 +31,10 @@ class TrulyTabularConfig:
         lang (str): Language code (default is "en").
         list_separator (str): Character used to separate items in lists (default is "|").
         endpoint_name (str): Name of the endpoint to use (default is "wikidata").
-        with_subclasses (bool): Flag indicating whether to include subclasses in the queries (default is False).
     """
-
     lang: str = "en"
     list_separator: str = "|"
     endpoint_name: str = "wikidata"
-    with_subclasses: bool = False
     pareto_level = 1
     # minimum percentual frequency of availability
     min_property_frequency = 20.0
@@ -66,16 +63,6 @@ class TrulyTabularConfig:
         pareto = self.pareto_levels[self.pareto_level]
         return pareto
 
-    @property
-    def subclass_predicate(self) -> str:
-        """
-        Get the subclass predicate string based on the with_subclasses flag.
-
-        Returns:
-            str: The subclass predicate.
-        """
-        return "wdt:P31/wdt:P279*" if self.with_subclasses else "wdt:P31"
-
     def setup_ui(self, webserver):
         """
         setup the user interface
@@ -83,9 +70,6 @@ class TrulyTabularConfig:
         with ui.grid(columns=2):
             webserver.add_select("lang", self.languages, with_input=True).bind_value(
                 self, "lang"
-            )
-            ui.checkbox("subclasses", value=self.with_subclasses).bind_value(
-                self, "with_subclasses"
             )
             list_separators = {
                 "|": "|",
@@ -251,16 +235,21 @@ class PropertySelection:
 
             self.propertyMap[itemId] = prop
 
-
 class TrulyTabularDisplay:
     """
     Displays a truly tabular analysis for a given Wikidata
     item
     """
 
-    def __init__(self, solution: "WdgridSolution", qid: str):
+    def __init__(self, 
+        solution: "WdgridSolution", 
+        qid: str):
+        """
+        constructor
+        """
         self.solution = solution
         self.config = solution.tt_config
+        self.search_predicate="wdt:P31"
         self.qid = qid
         self.tt = None
         self.naive_query_view = None
@@ -293,9 +282,24 @@ class TrulyTabularDisplay:
         with ui.element("div").classes("w-full") as self.main_container:
             with ui.splitter() as splitter:
                 with splitter.before:
-                    self.item_input = ui.input(
-                        "item", value=self.qid, on_change=self.update_display
-                    ).bind_value(self, "qid")
+                    with ui.row() as self.sp_row:
+                        self.item_input = ui.input(
+                            "item", value=self.qid, on_change=self.update_display
+                        ).bind_value(self, "qid")
+                        predicates={
+                            "wdt:P31": "instance of",
+                            "wdt:P31/wdt:P279*": "subclass of",
+                            "wdt:P179": "part of the series"
+                        }
+                        self.solution.add_select("predicate", 
+                            predicates, 
+                            with_input=True,
+                            value=self.search_predicate,
+                            on_change=self.update_display
+                        ).bind_value(
+                            self, "search_predicate"
+                        )
+                  
                     with ui.row() as self.item_row:
                         self.item_link_view = ui.html()
                         self.item_count_view = ui.html()
@@ -333,7 +337,7 @@ class TrulyTabularDisplay:
                 config = GridConfig(multiselect=True)
                 self.property_grid = ListOfDictsGrid(config=config)
         # immediately do an async call of update view
-        ui.timer(0, self.update_display, once=True)
+        #ui.timer(0, self.update_display, once=True)
 
     def createTrulyTabular(self, itemQid: str, propertyIds=[]):
         """
@@ -347,7 +351,7 @@ class TrulyTabularDisplay:
         tt = TrulyTabular(
             itemQid=itemQid,
             propertyIds=propertyIds,
-            subclassPredicate=self.config.subclass_predicate,
+            search_predicate=self.search_predicate,
             endpointConf=self.config.sparql_endpoint,
             debug=self.solution.debug,
         )
@@ -381,7 +385,7 @@ class TrulyTabularDisplay:
                 statsRow[f"{key}TryIt"] = tryItLink
             return statsRow
         except (BaseException, HTTPError) as ex:
-            self.handle_exception(ex)
+            self.solution.handle_exception(ex)
             return None
 
     async def getPropertyIdMap(self) -> Dict:
@@ -450,7 +454,7 @@ class TrulyTabularDisplay:
             self.aggregate_query_view.show_query(self.aggregateSparqlQuery.query)
             ui.notify("SPARQL queries generated")
         except Exception as ex:
-            self.handle_exception(ex)
+            self.solution.handle_exception(ex)
 
     async def on_generate_button_click(self, _event):
         """
@@ -460,7 +464,7 @@ class TrulyTabularDisplay:
             ui.notify(f"generating SPARQL query for {str(self.tt)}")
             await self.generateQueries()
         except BaseException as ex:
-            self.handleException(ex)
+            self.solution.handle_exception(ex)
 
     async def on_min_property_frequency_change(self, _event):
         """
@@ -526,7 +530,7 @@ class TrulyTabularDisplay:
                 self.update_property_query_view(total=self.ttcount)
 
         except Exception as ex:
-            self.handle_exception(ex)
+            self.solution.handle_exception(ex)
 
     def update_property_query_view(self, total: int):
         """
@@ -545,7 +549,7 @@ class TrulyTabularDisplay:
             self.property_query_view.show_query(mfp_query.query)
             self.update_properties_table(mfp_query)
         except Exception as ex:
-            self.handle_exception(ex)
+            self.solution.handle_exception(ex)
 
     def prepare_generation_specs(self):
         """
@@ -601,7 +605,7 @@ class TrulyTabularDisplay:
             self.update_property_stats()
             self.prepare_generation_specs()
         except Exception as ex:
-            self.handle_exception(ex)
+            self.solution.handle_exception(ex)
 
     def update_property_stats(self):
         """
@@ -623,7 +627,7 @@ class TrulyTabularDisplay:
                 self.progress_bar.reset()
                 ui.notify(f"Done getting statistics for {count} properties")
         except Exception as ex:
-            self.handle_exception(ex)
+            self.solution.handle_exception(ex)
 
     async def on_property_grid_selection_change(self, event):
         """
@@ -655,4 +659,4 @@ class TrulyTabularDisplay:
             await self.update_item_link_view()
             await run.io_bound(self.update_item_count_view)
         except Exception as ex:
-            self.handle_exception(ex)
+            self.solution.handle_exception(ex)
