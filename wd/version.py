@@ -3,6 +3,7 @@ Created on 2024-01-02
 
 @author: wf
 """
+
 from dataclasses import dataclass
 
 import wd

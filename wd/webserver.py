@@ -3,6 +3,7 @@ Created on 2024-01-03
 
 @author: wf
 """
+
 from ngwidgets.input_webserver import InputWebserver, InputWebSolution
 from ngwidgets.webserver import WebserverConfig
 from ngwidgets.widgets import Link
@@ -67,7 +68,7 @@ class WdgridSolution(InputWebSolution):
         def show():
             self.ttd = TrulyTabularDisplay(self, qid)
 
-        await (self.setup_content_div(show))
+        await self.setup_content_div(show)
 
     def configure_settings(self):
         """
@@ -103,4 +104,4 @@ class WdgridSolution(InputWebSolution):
         def show():
             self.wd_item_search = WikidataItemSearch(self, record_filter=record_filter)
 
-        await (self.setup_content_div(show))
+        await self.setup_content_div(show)

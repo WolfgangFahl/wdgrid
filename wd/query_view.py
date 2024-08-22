@@ -3,6 +3,7 @@ Created on 2024-01-04
 
 @author: wf
 """
+
 from lodstorage.query import Endpoint, Query
 from ngwidgets.webserver import NiceGuiWebserver
 from ngwidgets.widgets import Link

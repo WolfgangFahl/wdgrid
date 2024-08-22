@@ -3,14 +3,15 @@ Created on 2024-01-03
 
 @author: wf
 """
+
 import asyncio
 from typing import Callable
 
+from ez_wikidata.wdsearch import WikidataSearch
 from ngwidgets.lod_grid import ListOfDictsGrid
 from ngwidgets.webserver import NiceGuiWebserver
 from ngwidgets.widgets import Link
 from nicegui import ui
-from ez_wikidata.wdsearch import WikidataSearch
 
 
 class WikidataItemSearch:

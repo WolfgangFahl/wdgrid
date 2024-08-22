@@ -3,14 +3,15 @@ Created on 2024-01-04
 
 @author: wf
 """
+
 import asyncio
 import collections
 from dataclasses import dataclass
 from typing import Dict, List, Tuple
 from urllib.error import HTTPError
 
-from lodstorage.query import Endpoint, EndpointManager, Query
 from ez_wikidata.trulytabular import TrulyTabular
+from lodstorage.query import Endpoint, EndpointManager, Query
 from ngwidgets.lod_grid import GridConfig, ListOfDictsGrid
 from ngwidgets.progress import NiceguiProgressbar
 from ngwidgets.widgets import Lang, Link
@@ -32,6 +33,7 @@ class TrulyTabularConfig:
         list_separator (str): Character used to separate items in lists (default is "|").
         endpoint_name (str): Name of the endpoint to use (default is "wikidata").
     """
+
     lang: str = "en"
     list_separator: str = "|"
     endpoint_name: str = "wikidata"
@@ -235,21 +237,20 @@ class PropertySelection:
 
             self.propertyMap[itemId] = prop
 
+
 class TrulyTabularDisplay:
     """
     Displays a truly tabular analysis for a given Wikidata
     item
     """
 
-    def __init__(self, 
-        solution: "WdgridSolution", 
-        qid: str):
+    def __init__(self, solution: "WdgridSolution", qid: str):
         """
         constructor
         """
         self.solution = solution
         self.config = solution.tt_config
-        self.search_predicate="wdt:P31"
+        self.search_predicate = "wdt:P31"
         self.qid = qid
         self.tt = None
         self.naive_query_view = None
@@ -286,20 +287,19 @@ class TrulyTabularDisplay:
                         self.item_input = ui.input(
                             "item", value=self.qid, on_change=self.update_display
                         ).bind_value(self, "qid")
-                        predicates={
+                        predicates = {
                             "wdt:P31": "instance of",
                             "wdt:P31/wdt:P279*": "subclass of",
-                            "wdt:P179": "part of the series"
+                            "wdt:P179": "part of the series",
                         }
-                        self.solution.add_select("predicate", 
-                            predicates, 
+                        self.solution.add_select(
+                            "predicate",
+                            predicates,
                             with_input=True,
                             value=self.search_predicate,
-                            on_change=self.update_display
-                        ).bind_value(
-                            self, "search_predicate"
-                        )
-                  
+                            on_change=self.update_display,
+                        ).bind_value(self, "search_predicate")
+
                     with ui.row() as self.item_row:
                         self.item_link_view = ui.html()
                         self.item_count_view = ui.html()
@@ -337,7 +337,7 @@ class TrulyTabularDisplay:
                 config = GridConfig(multiselect=True)
                 self.property_grid = ListOfDictsGrid(config=config)
         # immediately do an async call of update view
-        #ui.timer(0, self.update_display, once=True)
+        # ui.timer(0, self.update_display, once=True)
 
     def createTrulyTabular(self, itemQid: str, propertyIds=[]):
         """
