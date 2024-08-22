@@ -244,7 +244,7 @@ class TrulyTabularDisplay:
     item
     """
 
-    def __init__(self, solution: "WdgridSolution", qid: str):
+    def __init__(self, solution, qid: str):
         """
         constructor
         """
@@ -337,7 +337,7 @@ class TrulyTabularDisplay:
                 config = GridConfig(multiselect=True)
                 self.property_grid = ListOfDictsGrid(config=config)
         # immediately do an async call of update view
-        # ui.timer(0, self.update_display, once=True)
+        ui.timer(0, self.update_display, once=True)
 
     def createTrulyTabular(self, itemQid: str, propertyIds=[]):
         """
@@ -638,7 +638,7 @@ class TrulyTabularDisplay:
             selected_rows = await self.property_grid.get_selected_rows()
             ui.notify(f"Selection changed: {selected_rows}")
 
-    async def update_item_link_view(self):
+    def update_item_link_view(self):
         with self.item_row:
             item_text = self.tt.item.asText(long=True)
             item_url = self.tt.item.url
@@ -649,6 +649,9 @@ class TrulyTabularDisplay:
         """
         update the display
         """
+        await run.io_bound(self.do_update_display)
+
+    def do_update_display(self):
         try:
             if self.solution.log_view:
                 self.solution.log_view.clear()
@@ -656,7 +659,7 @@ class TrulyTabularDisplay:
             for query_view in self.count_query_view, self.property_query_view:
                 query_view.sparql_endpoint = self.config.sparql_endpoint
             # Initialize TrulyTabular with the qid
-            await self.update_item_link_view()
-            await run.io_bound(self.update_item_count_view)
+            self.update_item_link_view()
+            self.update_item_count_view()
         except Exception as ex:
             self.solution.handle_exception(ex)

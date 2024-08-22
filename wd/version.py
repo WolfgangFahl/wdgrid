@@ -19,7 +19,7 @@ class Version(object):
     version = wd.__version__
     description = "wikdata grid and sync"
     date = "2021-12-12"
-    updated = "2024-03-07"
+    updated = "2024-08-22"
 
     authors = "Wolfgang Fahl"
 
