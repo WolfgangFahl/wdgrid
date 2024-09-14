@@ -102,6 +102,6 @@ class WdgridSolution(InputWebSolution):
                 record.update(temp_items)
 
         def show():
-            self.wd_item_search = WikidataItemSearch(self, record_filter=record_filter)
+            self.wd_item_search = WikidataItemSearch(self, record_filter=record_filter, lang=self.webserver.tt_config.lang)
 
         await self.setup_content_div(show)

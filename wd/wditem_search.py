@@ -9,7 +9,7 @@ from typing import Callable
 
 from ez_wikidata.wdsearch import WikidataSearch
 from ngwidgets.lod_grid import ListOfDictsGrid
-from ngwidgets.webserver import NiceGuiWebserver
+from ngwidgets.webserver import WebSolution
 from ngwidgets.widgets import Link
 from nicegui import ui
 
@@ -19,18 +19,19 @@ class WikidataItemSearch:
     wikidata item search
     """
 
-    def __init__(self, webserver: NiceGuiWebserver, record_filter: Callable = None):
+    def __init__(self, solution: WebSolution, record_filter: Callable = None, lang:str="en"):
         """
-        Initialize the WikidataItemSearch with the given webserver.
+        Initialize the WikidataItemSearch with the given solution.
 
         Args:
-            webserver (NiceGuiWebserver): The webserver to attach the search UI.
+            solution (WebSolution): The solution to attach the search UI.
             record_filter(Callable): callback for displayed found records
         """
-        self.webserver = webserver
+        self.solution = solution
+        self.lang=lang
         self.record_filter = record_filter
         self.limit = 9
-        self.wd_search = WikidataSearch(self.webserver.tt_config.lang)
+        self.wd_search = WikidataSearch(lang)
         self.search_debounce_task = None
         self.keyStrokeTime = 0.65  # minimum time in seconds to wait between keystrokes before starting searching
         self.search_result_row = None
@@ -76,7 +77,7 @@ class WikidataItemSearch:
             search_for = self.search_input.value
             if self.search_result_row:
                 with self.search_result_row:
-                    lang = self.webserver.tt_config.lang
+                    lang = self.lang
                     ui.notify(f"searching wikidata for {search_for} ({lang})...")
                     self.wd_search.language = lang
                     wd_search_result = self.wd_search.searchOptions(
@@ -90,7 +91,7 @@ class WikidataItemSearch:
             # The search was cancelled because of new input, so just quietly exit
             pass
         except BaseException as ex:
-            self.webserver.handle_exception(ex, self.webserver)
+            self.solution.handle_exception(ex)
 
     def get_selection_view_lod(self, wd_search_result: list) -> dict:
         """
