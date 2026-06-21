@@ -605,11 +605,21 @@ class TrulyTabularDisplay:
             with self.query_display_container:
                 msg = f"running query for most frequently used properties of {str(self.tt)} ..."
                 ui.notify(msg)
+            property_lod = []
             try:
                 property_lod = self.tt.sparql.queryAsListOfDicts(mfp_query.query)
             except EndPointInternalError as ex:
                 if self.isTimeoutException(ex):
                     raise Exception("Query timeout of the property table query")
+                raise
+            if not property_lod:
+                with self.query_display_container:
+                    ui.notify(
+                        f"No properties found for {str(self.tt)} - "
+                        f"the item may have no instances (e.g. it is an occupation, "
+                        f"not a class). Try a class item or a different search predicate."
+                    )
+                return
             self.property_selection = PropertySelection(
                 property_lod,
                 total=self.ttcount,
