@@ -300,9 +300,12 @@ class TrulyTabularDisplay:
                             "item", value=self.qid, on_change=self.update_display
                         ).bind_value(self, "qid")
                         predicates = {
-                            "wdt:P31": "instance of",
-                            "wdt:P31/wdt:P279*": "subclass of",
-                            "wdt:P179": "part of the series",
+                            "wdt:P31": "instance of (P31)",
+                            "wdt:P31/wdt:P279*": "instance/subclass of (P31/P279*)",
+                            "wdt:P279": "subclass of (P279)",
+                            "wdt:P106": "occupation (P106)",
+                            "wdt:P179": "part of the series (P179)",
+                            "wdt:P361": "part of (P361)",
                         }
                         self.solution.add_select(
                             "predicate",
