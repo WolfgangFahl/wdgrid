@@ -26,7 +26,7 @@ class WdgridCmd(WebserverCmd):
         parser.add_argument(
             "-en",
             "--endpointName",
-            default="wikidata",
+            default="wikidata-qlever",
             help=f"Name of the endpoint to use for queries. Available by default: {EndpointManager.getEndpointNames(lang='sparql')}",
         )
         return parser

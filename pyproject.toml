@@ -22,7 +22,7 @@ dependencies = [
 	#https://pypi.org/project/tabulate/
 	"tabulate>=0.10.0",
 	# https://pypi.org/project/py-ez-wikidata/
-	"py-ez-wikidata>=0.4.0"
+	"py-ez-wikidata>=0.4.1"
 ]
 
 requires-python = ">=3.10"

@@ -6,11 +6,11 @@ Created on 2024-01-04
 
 import asyncio
 import collections
+import os
 from dataclasses import dataclass
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Optional, Tuple
 from urllib.error import HTTPError
 
-from SPARQLWrapper.SPARQLExceptions import EndPointInternalError
 from ez_wikidata.trulytabular import TrulyTabular
 from lodstorage.query import Endpoint, EndpointManager, Query
 from ngwidgets.lod_grid import GridConfig, ListOfDictsGrid
@@ -18,6 +18,8 @@ from ngwidgets.progress import NiceguiProgressbar
 from ngwidgets.widgets import Lang, Link
 from nicegui import run, ui
 from numpy.random.mtrand import pareto
+from SPARQLWrapper.SPARQLExceptions import EndPointInternalError
+
 from wd.pareto import Pareto
 from wd.query_view import QueryView
 
@@ -35,16 +37,27 @@ class TrulyTabularConfig:
 
     lang: str = "en"
     list_separator: str = "|"
-    endpoint_name: str = "wikidata"
+    endpoint_name: str = "wikidata-qlever"
     pareto_level = 1
     # minimum percentual frequency of availability
     min_property_frequency = 20.0
+
+    @classmethod
+    def get_endpoints_path(cls) -> str:
+        """
+        get the path to the bundled endpoints.yaml resource
+        """
+        return os.path.join(os.path.dirname(__file__), "resources", "endpoints.yaml")
 
     def __post_init__(self):
         """
         Post-initialization to setup additional attributes.
         """
-        self.endpoints = EndpointManager.getEndpoints(lang="sparql")
+        self.endpoints = EndpointManager.getEndpoints(
+            endpointPath=self.get_endpoints_path(),
+            lang="sparql",
+            with_default=False,
+        )
         self.languages = Lang.get_language_dict()
         self.pareto_levels = {}
         self.pareto_select = {}
@@ -356,7 +369,9 @@ class TrulyTabularDisplay:
         )
         return tt
 
-    def wikiTrulyTabularPropertyStats(self, itemId: str, propertyId: str)->Optional[dict]:
+    def wikiTrulyTabularPropertyStats(
+        self, itemId: str, propertyId: str
+    ) -> Optional[dict]:
         """
         get the truly tabular property statistics
 
@@ -366,7 +381,7 @@ class TrulyTabularDisplay:
         Returns:
             dict: statistics row with TryIt links, or None if unavailable
         """
-        statsRow=None
+        statsRow = None
         try:
             tt = self.createTrulyTabular(itemId, propertyIds=[propertyId])
             if tt.properties:

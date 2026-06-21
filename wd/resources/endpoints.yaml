@@ -1,0 +1,87 @@
+# SPARQL endpoints for wdgrid
+# 2026-06-21 - WDQS graph split aware endpoint configuration
+# based on the snapquery endpoint format (prefix_sets, calls_per_minute)
+endpoints:
+  wikidata-qlever:
+    description: QLever Freiburg Wikidata (fast, default).
+    lang: sparql
+    method: POST
+    database: qlever
+    endpoint: https://qlever.dev/api/wikidata
+    website: https://qlever.dev/wikidata
+    calls_per_minute: 60
+    prefix_sets:
+      - rdf
+      - wikidata
+      - commons
+
+  wikidata-main:
+    description: WDQS Graph Split - main (non-scholarly).
+    lang: sparql
+    endpoint: https://query-main.wikidata.org/sparql
+    website: https://query-main.wikidata.org/
+    database: blazegraph
+    method: POST
+    calls_per_minute: 30
+    prefix_sets:
+      - rdf
+      - wikidata
+      - blazegraph
+      - commons
+
+  wikidata-scholarly:
+    description: WDQS Graph Split - scholarly.
+    lang: sparql
+    endpoint: https://query-scholarly.wikidata.org/sparql
+    website: https://query-scholarly.wikidata.org/
+    database: blazegraph
+    method: POST
+    calls_per_minute: 30
+    prefix_sets:
+      - rdf
+      - wikidata
+      - blazegraph
+      - commons
+
+  wikidata:
+    description: |
+      Wikimedia Wikidata Query Service (legacy full).
+      Stable but high-load; prefer -main/-scholarly or -qlever.
+    lang: sparql
+    endpoint: https://query-legacy-full.wikidata.org/sparql
+    website: https://query-legacy-full.wikidata.org
+    database: blazegraph
+    method: POST
+    calls_per_minute: 30
+    prefix_sets:
+      - rdf
+      - wikidata
+      - blazegraph
+      - commons
+
+  wikidata-dbis:
+    description: RWTH Aachen i5 full Wikidata mirror.
+    lang: sparql
+    endpoint: https://wdqs.wikidata.dbis.rwth-aachen.de/sparql
+    website: https://wdqs.wikidata.dbis.rwth-aachen.de/
+    database: blazegraph
+    method: POST
+    calls_per_minute: 30
+    prefix_sets:
+      - rdf
+      - wikidata
+      - blazegraph
+      - commons
+
+  wikidata-qlever-dbis:
+    description: QLever RWTH Aachen i5 Wikidata.
+    lang: sparql
+    method: POST
+    database: qlever
+    endpoint: https://qlever-api.wikidata.dbis.rwth-aachen.de/sparql
+    website: https://qlever.wikidata.dbis.rwth-aachen.de/wikidata
+    calls_per_minute: 60
+    prefix_sets:
+      - rdf
+      - wikidata
+      - commons
