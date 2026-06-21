@@ -24,7 +24,7 @@ class WdgridWebServer(InputWebserver):
         """
         get the configuration for this Webserver
         """
-        copy_right = "(c)2022-2024 Wolfgang Fahl"
+        copy_right = "(c)2022-2026 Wolfgang Fahl"
         config = WebserverConfig(
             short_name="wdgrid",
             copy_right=copy_right,
