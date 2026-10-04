@@ -19,7 +19,9 @@ class WikidataItemSearch:
     wikidata item search
     """
 
-    def __init__(self, solution: WebSolution, record_filter: Callable = None, lang:str="en"):
+    def __init__(
+        self, solution: WebSolution, record_filter: Callable = None, lang: str = "en"
+    ):
         """
         Initialize the WikidataItemSearch with the given solution.
 
@@ -28,7 +30,7 @@ class WikidataItemSearch:
             record_filter(Callable): callback for displayed found records
         """
         self.solution = solution
-        self.lang=lang
+        self.lang = lang
         self.record_filter = record_filter
         self.limit = 9
         self.wd_search = WikidataSearch(lang)

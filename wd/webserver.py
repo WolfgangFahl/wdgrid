@@ -4,12 +4,16 @@ Created on 2024-01-03
 @author: wf
 """
 
+from typing import Any, Dict, Optional
+
+from fastapi import HTTPException
 from ngwidgets.input_webserver import InputWebserver, InputWebSolution
 from ngwidgets.webserver import WebserverConfig
 from ngwidgets.widgets import Link
-from nicegui import Client, ui
+from nicegui import Client, app, ui
 
 from wd.truly_tabular_display import TrulyTabularConfig, TrulyTabularDisplay
+from wd.tt_analysis import TrulyTabularAnalysis
 from wd.version import Version
 from wd.wditem_search import WikidataItemSearch
 
@@ -38,6 +42,12 @@ class WdgridWebServer(InputWebserver):
     def __init__(self):
         """Constructs all the necessary attributes for the WebServer object."""
         InputWebserver.__init__(self, config=WdgridWebServer.get_config())
+        version = self.config.version
+        # OpenAPI metadata so /docs shows wdgrid instead of FastAPI defaults
+        app.title = version.name
+        app.version = version.version
+        app.description = version.description
+        self.tt_analysis = TrulyTabularAnalysis(TrulyTabularConfig())
 
         @ui.page("/tt/{qid}")
         async def truly_tabular(client: Client, qid: str):
@@ -45,6 +55,43 @@ class WdgridWebServer(InputWebserver):
             initiate the truly tabular analysis for the given Wikidata QIDs
             """
             await self.page(client, WdgridSolution.truly_tabular, qid)
+
+        @app.get("/api/tt/{qid}", tags=["wdgrid"])
+        def api_truly_tabular(
+            qid: str,
+            predicate: str = "wdt:P31",
+            lang: str = "en",
+            endpoint: Optional[str] = None,
+            min_frequency: float = 20.0,
+            stats: bool = False,
+        ) -> Dict[str, Any]:
+            """
+            Get the truly tabular analysis for the given Wikidata item.
+
+            Args:
+                qid: Wikidata id of the item to analyze e.g. Q356847 for car carrier
+                predicate: the search predicate e.g. wdt:P31 for instance of
+                lang: the language for labels
+                endpoint: the name of the SPARQL endpoint - default is the endpoint the server was started with
+                min_frequency: the minimum frequency of the properties in percent
+                stats: if true add the non tabular statistics (one query per property)
+            """
+            if endpoint is None:
+                endpoint = getattr(getattr(self, "args", None), "endpointName", None)
+            try:
+                analysis = self.tt_analysis.analyze(
+                    qid,
+                    search_predicate=predicate,
+                    lang=lang,
+                    endpoint_name=endpoint,
+                    min_frequency=min_frequency,
+                    with_stats=stats,
+                )
+            except KeyError as ke:
+                raise HTTPException(status_code=404, detail=str(ke))
+            except Exception as ex:
+                raise HTTPException(status_code=502, detail=str(ex))
+            return analysis
 
 
 class WdgridSolution(InputWebSolution):
@@ -102,6 +149,8 @@ class WdgridSolution(InputWebSolution):
                 record.update(temp_items)
 
         def show():
-            self.wd_item_search = WikidataItemSearch(self, record_filter=record_filter, lang=self.tt_config.lang)
+            self.wd_item_search = WikidataItemSearch(
+                self, record_filter=record_filter, lang=self.tt_config.lang
+            )
 
         await self.setup_content_div(show)
