@@ -28,6 +28,28 @@ For a specific release, use the version DOI shown on the corresponding
 * [RWTH Aachen i5](https://wdgrid.wikidata.dbis.rwth-aachen.de/)
 * [BITPlan](https://wdgrid.bitplan.com)
 
+## REST API
+The truly tabular analysis is available as JSON via `/api/tt/{qid}`.
+The Swagger UI is at `/docs` of each demo, e.g. https://wdgrid.bitplan.com/docs
+
+```bash
+# instance count and property frequencies of car carrier (Q356847)
+curl -s https://wdgrid.bitplan.com/api/tt/Q356847
+
+# ship (Q11446): only properties used by at least 50 % of the instances
+curl -s "https://wdgrid.bitplan.com/api/tt/Q11446?min_frequency=50"
+
+# car carrier including the instances of its subclasses
+curl -s "https://wdgrid.bitplan.com/api/tt/Q356847?predicate=wdt:P31/wdt:P279*"
+
+# same analysis on the RWTH Aachen i5 demo
+curl -s https://wdgrid.wikidata.dbis.rwth-aachen.de/api/tt/Q356847
+```
+
+Query parameters: `predicate` (default `wdt:P31`), `lang` (default `en`),
+`endpoint` (name of the SPARQL endpoint), `min_frequency` (default `20.0`),
+`stats` (default `false`, adds the non tabular statistics with one query per property).
+
 ## Links
 * [Python](https://www.python.org/)
 * [wikidata](https://www.wikidata.org/wiki/Wikidata:Main_Page)
